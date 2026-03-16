@@ -8,7 +8,7 @@ class BuildPhase(BasePhase):
 
     async def run(self, round_number: int) -> AgentResult:
         config = self._get_agent_config(round_number)
-        result = await self.agent_manager.spawn_agent(config, prompt=self._build_task_prompt(round_number))
+        result = await self.agent_manager.spawn_agent(config, prompt=self._build_task_prompt(round_number), phase_name=self.name)
         return result
 
     def validate(self, round_number: int) -> tuple[bool, str]:

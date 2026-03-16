@@ -6,6 +6,9 @@ from builder.context import ProjectContext
 from builder.models import AgentConfig, AgentResult, BuilderConfig
 
 
+MAX_CONTEXT_CHARS = 50000  # Cap context per file to prevent prompt explosion
+
+
 class BasePhase(abc.ABC):
     name: str = ""
     default_timeout: int = 600
@@ -60,6 +63,9 @@ class BasePhase(abc.ABC):
             path = Path(filepath)
             if path.exists():
                 content = path.read_text()
+                # Cap context size to prevent prompt explosion in later rounds
+                if len(content) > MAX_CONTEXT_CHARS:
+                    content = content[:MAX_CONTEXT_CHARS] + "\n\n... [truncated — full output in file] ..."
                 parts.append(f"\n--- {path.name} ---\n{content}")
         return "\n\n".join(parts)
 

@@ -7,7 +7,7 @@ class BrainstormPhase(BasePhase):
 
     async def run(self, round_number: int) -> AgentResult:
         config = self._get_agent_config(round_number)
-        result = await self.agent_manager.spawn_agent(config, prompt=self._build_task_prompt(round_number))
+        result = await self.agent_manager.spawn_agent(config, prompt=self._build_task_prompt(round_number), phase_name=self.name)
         if result.success:
             output_path = self.context.get_phase_output_path(round_number, self.name)
             output_path.write_text(result.output)

@@ -57,10 +57,10 @@ class Orchestrator:
             self._git_commit_round(round_num)
 
         self.context.save_token_usage(self.token_breakdown, self.total_tokens)
-        await self._emit(LogMessage(message="Build complete!"))
+        cost_usd = self.agent_manager.total_cost_usd
+        await self._emit(LogMessage(message=f"Build complete! Total cost: ${cost_usd:.2f}"))
 
     async def _run_round(self, round_number: int) -> None:
-        round_key = str(round_number)
         self.token_breakdown.setdefault(f"round_{round_number}", {})
 
         state = self.context.load_state()
@@ -88,16 +88,31 @@ class Orchestrator:
         self.context.update_phase_status(round_number, phase.name, PhaseStatus.IN_PROGRESS)
 
         for attempt in range(1, self.MAX_PHASE_RETRIES + 1):
-            result = await phase.run(round_number)
-
-            if not result.success:
-                await self._emit(LogMessage(message=f"{phase.name} failed: {result.error}", level="error"))
-                await self._emit(PhaseCompleted(round_number=round_number, phase_name=phase.name, success=False))
+            if self._cancelled:
                 return False
 
+            result = await phase.run(round_number)
+
+            # Track tokens even on failure
             self.total_tokens += result.token_usage
             self.token_breakdown.setdefault(f"round_{round_number}", {})[phase.name] = result.token_usage
             await self._emit(TokenUpdate(total_tokens=self.total_tokens, phase_tokens=result.token_usage))
+
+            if not result.success:
+                # Retry agent failures too (not just validation failures)
+                if attempt < self.MAX_PHASE_RETRIES:
+                    await self._emit(LogMessage(
+                        message=f"{phase.name} agent failed (attempt {attempt}/{self.MAX_PHASE_RETRIES}): {result.error}",
+                        level="warning",
+                    ))
+                    continue
+                else:
+                    await self._emit(LogMessage(
+                        message=f"{phase.name} failed after {self.MAX_PHASE_RETRIES} attempts: {result.error}",
+                        level="error",
+                    ))
+                    await self._emit(PhaseCompleted(round_number=round_number, phase_name=phase.name, success=False))
+                    return False
 
             is_valid, error_msg = phase.validate(round_number)
             if is_valid:
@@ -105,10 +120,16 @@ class Orchestrator:
                 await self._emit(PhaseCompleted(round_number=round_number, phase_name=phase.name, success=True))
                 return True
 
-            await self._emit(LogMessage(
-                message=f"{phase.name} validation failed (attempt {attempt}/{self.MAX_PHASE_RETRIES}): {error_msg}",
-                level="warning",
-            ))
+            if attempt < self.MAX_PHASE_RETRIES:
+                await self._emit(LogMessage(
+                    message=f"{phase.name} validation failed (attempt {attempt}/{self.MAX_PHASE_RETRIES}): {error_msg}",
+                    level="warning",
+                ))
+            else:
+                await self._emit(LogMessage(
+                    message=f"{phase.name} validation failed after {self.MAX_PHASE_RETRIES} attempts: {error_msg}",
+                    level="error",
+                ))
 
         await self._emit(PhaseCompleted(round_number=round_number, phase_name=phase.name, success=False))
         return False

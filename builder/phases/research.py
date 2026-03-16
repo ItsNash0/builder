@@ -29,7 +29,7 @@ class ResearchPhase(BasePhase):
             ),
         ]
         prompts = [task_prompt] * len(configs)
-        results = await self.agent_manager.spawn_parallel(configs, prompts=prompts)
+        results = await self.agent_manager.spawn_parallel(configs, prompts=prompts, phase_name=self.name)
         combined_output = "\n\n".join(r.output for r in results if r.success and r.output)
         total_tokens = sum(r.token_usage for r in results)
         all_success = any(r.success for r in results)

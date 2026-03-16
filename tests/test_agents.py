@@ -74,7 +74,7 @@ async def test_spawn_parallel(manager):
         AgentConfig(system_prompt="Agent 2", context_files=[], working_directory="/tmp"),
     ]
 
-    async def mock_spawn(config, prompt=""):
+    async def mock_spawn(config, prompt="", phase_name=""):
         return AgentResult(success=True, output=f"Result from {config.system_prompt}", token_usage=100)
 
     manager.spawn_agent = AsyncMock(side_effect=mock_spawn)

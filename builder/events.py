@@ -57,6 +57,7 @@ class RetryAttempt(Event):
     attempt: int = 0
     max_retries: int = 3
     error: str = ""
+    reason: str = ""
 
 
 @dataclass
@@ -69,6 +70,11 @@ class LogMessage(Event):
 class TokenUpdate(Event):
     total_tokens: int = 0
     phase_tokens: int = 0
+
+
+@dataclass
+class CostUpdate(Event):
+    total_cost_usd: float = 0.0
 
 
 @dataclass

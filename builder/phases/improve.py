@@ -21,7 +21,7 @@ class ImprovePhase(BasePhase):
                 "\n7. Do a final verification: install deps → start app → curl/test → confirm it works"
                 "\n\nThe user will receive this project as-is. It must work out of the box."
             )
-        result = await self.agent_manager.spawn_agent(config, prompt=self._build_task_prompt(round_number))
+        result = await self.agent_manager.spawn_agent(config, prompt=self._build_task_prompt(round_number), phase_name=self.name)
         if result.success:
             output_path = self.context.get_phase_output_path(round_number, self.name)
             output_path.write_text(result.output)

@@ -18,6 +18,7 @@ from builder.events import (
     RetryAttempt,
     LogMessage,
     TokenUpdate,
+    CostUpdate,
     ShutdownRequested,
 )
 from builder.models import PHASE_NAMES
@@ -59,10 +60,12 @@ class ActiveAgents(Static):
 
 class StatusBar(Static):
     total_tokens: reactive[int] = reactive(0)
+    total_cost: reactive[float] = reactive(0.0)
     elapsed: reactive[str] = reactive("0:00:00")
 
     def render(self) -> str:
-        return f"Tokens: {self.total_tokens:,} | Elapsed: {self.elapsed} | Ctrl+C to cancel"
+        cost_str = f"${self.total_cost:.2f}" if self.total_cost > 0 else "$0.00"
+        return f"Tokens: {self.total_tokens:,} | Cost: {cost_str} | Elapsed: {self.elapsed} | Ctrl+C to cancel"
 
 
 class BuilderDashboard(App):
@@ -164,9 +167,10 @@ class BuilderDashboard(App):
             agents_widget.agents = dict(self._active_agents)
 
         elif isinstance(event, RetryAttempt):
+            reason = event.reason or event.error
             log.write(
                 f"[yellow]{ts}[/yellow] Retry {event.attempt}/{event.max_retries} "
-                f"for {event.phase_name}: {event.error[:80]}"
+                f"for {event.phase_name}: {reason[:80]}"
             )
 
         elif isinstance(event, LogMessage):
@@ -178,6 +182,9 @@ class BuilderDashboard(App):
 
         elif isinstance(event, TokenUpdate):
             self.query_one("#status-bar", StatusBar).total_tokens = event.total_tokens
+
+        elif isinstance(event, CostUpdate):
+            self.query_one("#status-bar", StatusBar).total_cost = event.total_cost_usd
 
         elif isinstance(event, ShutdownRequested):
             log.write(f"[bold red]{ts} Shutting down...[/bold red]")

@@ -1,4 +1,5 @@
 import asyncio
+import random
 import uuid
 from pathlib import Path
 
@@ -19,6 +20,7 @@ from builder.events import (
     AgentFinished,
     RetryAttempt,
     LogMessage,
+    CostUpdate,
 )
 from builder.models import AgentConfig, AgentResult
 
@@ -46,39 +48,117 @@ _mp.parse_message = _patched_parse_message
 _client.parse_message = _patched_parse_message
 
 
+# Tool scoping per phase type — restrict what agents can do
+PHASE_TOOL_SCOPES = {
+    "brainstorm": [
+        "Read", "Glob", "Grep", "Bash(read-only commands)",
+    ],
+    "research": [
+        "Read", "Glob", "Grep", "Bash", "WebSearch", "WebFetch",
+    ],
+    "build": None,  # Full access
+    "verify": None,  # Full access — needs to run app & fix code
+    "test": None,    # Full access — needs to run app & fix code
+    "improve": None, # Full access on final round
+}
+
+# Phase-dependent max_turns — brainstorm needs few, build needs many
+PHASE_MAX_TURNS = {
+    "brainstorm": 25,
+    "research": 30,
+    "build": 100,
+    "verify": 50,
+    "test": 75,
+    "improve": 50,
+}
+
+# Rate limit retry config
+MAX_SPAWN_RETRIES = 5
+BASE_RETRY_DELAY = 2.0   # seconds
+MAX_RETRY_DELAY = 120.0  # seconds
+
+
+def _is_rate_limit_error(error: Exception) -> bool:
+    """Check if an error is a rate limit / transient error worth retrying."""
+    msg = str(error).lower()
+    return any(kw in msg for kw in [
+        "rate_limit", "rate limit", "429", "overloaded",
+        "too many requests", "capacity", "server_error",
+        "500", "502", "503", "529",
+    ])
+
+
 class AgentManager:
     def __init__(self, event_queue: asyncio.Queue):
         self.event_queue = event_queue
+        self.total_cost_usd: float = 0.0
 
     async def _emit(self, event) -> None:
         await self.event_queue.put(event)
 
     async def spawn_agent(
-        self, config: AgentConfig, prompt: str = ""
+        self, config: AgentConfig, prompt: str = "", phase_name: str = ""
     ) -> AgentResult:
-        """Spawn a single Claude Code subagent.
+        """Spawn a single Claude Code subagent with automatic retry on rate limits.
 
         Args:
             config: Agent configuration (system_prompt used as system prompt)
             prompt: The user-facing prompt/task (what to do). If empty, uses system_prompt.
+            phase_name: Name of the phase (for tool scoping and max_turns).
         """
+        for attempt in range(1, MAX_SPAWN_RETRIES + 1):
+            result = await self._spawn_agent_once(config, prompt, phase_name)
+
+            if result.success:
+                return result
+
+            # Check if it's a retryable error
+            if result.error and _is_rate_limit_error(Exception(result.error)):
+                if attempt < MAX_SPAWN_RETRIES:
+                    # Exponential backoff with jitter
+                    delay = min(BASE_RETRY_DELAY * (2 ** (attempt - 1)), MAX_RETRY_DELAY)
+                    jitter = random.uniform(0, delay * 0.5)
+                    wait_time = delay + jitter
+
+                    await self._emit(RetryAttempt(
+                        phase_name=phase_name,
+                        attempt=attempt,
+                        max_retries=MAX_SPAWN_RETRIES,
+                        reason=f"Rate limited. Waiting {wait_time:.0f}s before retry...",
+                    ))
+                    await asyncio.sleep(wait_time)
+                    continue
+
+            # Non-retryable error, return immediately
+            return result
+
+        return result  # Return last result after all retries exhausted
+
+    async def _spawn_agent_once(
+        self, config: AgentConfig, prompt: str = "", phase_name: str = ""
+    ) -> AgentResult:
+        """Single attempt to spawn a Claude Code subagent."""
         agent_id = str(uuid.uuid4())[:8]
 
         await self._emit(AgentSpawned(
             agent_id=agent_id,
-            phase_name="",
+            phase_name=phase_name,
             description=config.system_prompt[:80],
         ))
 
         user_prompt = prompt if prompt else "Execute your task as described in the system prompt."
         output_parts: list[str] = []
         token_usage = 0
+        cost_usd = 0.0
+
+        # Phase-dependent max_turns
+        max_turns = PHASE_MAX_TURNS.get(phase_name, 50)
 
         options = ClaudeCodeOptions(
             system_prompt=config.system_prompt,
             cwd=Path(config.working_directory),
             permission_mode="bypassPermissions",
-            max_turns=50,
+            max_turns=max_turns,
         )
 
         try:
@@ -100,9 +180,11 @@ class AgentManager:
                             ))
                 elif isinstance(message, ResultMessage):
                     if message.total_cost_usd:
+                        cost_usd = message.total_cost_usd
+                        self.total_cost_usd += cost_usd
                         # Approximate tokens from cost (rough estimate).
-                        # The SDK does not expose raw token counts directly.
-                        token_usage = int(message.total_cost_usd * 100000)
+                        token_usage = int(cost_usd * 100000)
+                        await self._emit(CostUpdate(total_cost_usd=self.total_cost_usd))
 
             result = AgentResult(
                 success=True,
@@ -118,10 +200,11 @@ class AgentManager:
                 token_usage=0,
             )
         except ProcessError as e:
+            error_msg = f"Process failed with exit code: {e.exit_code}"
             result = AgentResult(
                 success=False,
                 output="",
-                error=f"Process failed with exit code: {e.exit_code}",
+                error=error_msg,
                 token_usage=0,
             )
         except Exception as e:
@@ -141,13 +224,13 @@ class AgentManager:
         return result
 
     async def spawn_parallel(
-        self, configs: list[AgentConfig], prompts: list[str] | None = None
+        self, configs: list[AgentConfig], prompts: list[str] | None = None, phase_name: str = ""
     ) -> list[AgentResult]:
         """Spawn multiple agents concurrently."""
         if prompts is None:
             prompts = [""] * len(configs)
         tasks = [
-            self.spawn_agent(config, prompt=prompt)
+            self.spawn_agent(config, prompt=prompt, phase_name=phase_name)
             for config, prompt in zip(configs, prompts)
         ]
         return await asyncio.gather(*tasks)
