@@ -28,7 +28,7 @@ No further interaction is required until the final output is delivered. The user
 When `builder` is run in a directory with an existing `.builder/state.json`:
 
 - The wizard detects the previous run and asks: "Previous build detected (Round 2/3, Phase: Build). Resume? (Y/n)"
-- If yes: resumes from the last incomplete phase.
+- If yes: resumes from the last incomplete phase. Phases marked `failed_skipped` are retried on resume (the user may have fixed the environment).
 - If no: archives the old `.builder/` to `.builder.bak/` and starts fresh.
 
 ### Entry Point
@@ -137,7 +137,7 @@ Tracks execution progress with per-round completion history:
     "2": {
       "phases": {
         "brainstorm": "completed",
-        "research": "completed",
+        "research": "failed_skipped",
         "build": "in_progress",
         "verify": "pending",
         "test": "pending",
@@ -186,7 +186,7 @@ class AgentManager:
 - `system_prompt` — role and instructions for the phase
 - `context_files` — list of `.builder/` files to include as context in the prompt
 - `working_directory` — where the agent operates
-- `timeout` — max execution time per agent (default: 10 minutes)
+- `timeout` — max execution time per agent (default: 10 minutes, Build phase default: 30 minutes)
 
 Note: Claude Code subagents have access to all standard Claude Code tools (file I/O, bash, etc.) by default. Tool access is managed by the Claude Code environment, not by this orchestrator.
 
@@ -274,7 +274,7 @@ builder/
 
 ## Dependencies
 
-- `claude_agent_sdk` — spawning Claude Code subagents
+- `claude-code-sdk` (import: `claude_code_sdk`) — spawning Claude Code subagents. Note: the exact package name should be verified against the latest published SDK at implementation time. If unavailable, fall back to subprocess-based CLI invocation of `claude`.
 - `textual` — TUI dashboard
 - `inquirerpy` — interactive CLI wizard prompts
 - `pydantic` — data models for config, state, agent results
@@ -287,4 +287,5 @@ builder/
 - **Textual for TUI**: Full-featured TUI framework with proper resize, scrolling, and widget support — better than raw `rich.live` for a dashboard with multiple panels.
 - **Self-healing over fail-fast**: Autonomous operation requires resilience. Passing error context on retry lets agents diagnose their own failures.
 - **Prompt files as markdown**: Keeps system prompts readable, editable, and version-controlled separate from code. Loaded at runtime with Python string `.format()` for variable substitution (e.g., `{project_type}`, `{round_number}`). The orchestrator reads each `.md` file, substitutes variables, and prepends accumulated context files.
-- **Git commit per round**: The orchestrator creates a git commit at the end of each round to provide a snapshot of progress. This enables diffing between rounds and recovery if a later round introduces regressions.
+- **Git commit per round**: The orchestrator creates a git commit at the end of each round to provide a snapshot of progress. This enables diffing between rounds and recovery if a later round introduces regressions. If the working directory is not a git repo, the orchestrator runs `git init` before the first round. Commit message format: `builder: round N complete`. The `.builder/` directory is committed alongside project files (it serves as the build record).
+- **No budget cap in v1**: Token usage is tracked and displayed but not capped. Adding an optional `--max-tokens` budget is a future enhancement. The wizard displays a note that long runs with many rounds will consume significant tokens.
