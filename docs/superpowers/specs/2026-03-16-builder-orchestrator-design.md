@@ -15,7 +15,21 @@ Interactive CLI wizard using `inquirerpy`:
 3. **Iteration rounds** — number input (1-10, default 3)
 4. **Confirmation** — summary of choices, then execution begins
 
-No further interaction is required until the final output is delivered.
+No further interaction is required until the final output is delivered. The user can press Ctrl+C at any time to gracefully cancel execution. The orchestrator will finish the current agent operation, save state, and exit cleanly.
+
+### Cancellation
+
+- **Ctrl+C** triggers graceful shutdown: the orchestrator signals running agents to stop, waits briefly for cleanup, saves `state.json`, and exits.
+- **Double Ctrl+C** forces immediate exit.
+- The TUI dashboard displays a "Cancelling..." indicator during graceful shutdown.
+
+### Resume
+
+When `builder` is run in a directory with an existing `.builder/state.json`:
+
+- The wizard detects the previous run and asks: "Previous build detected (Round 2/3, Phase: Build). Resume? (Y/n)"
+- If yes: resumes from the last incomplete phase.
+- If no: archives the old `.builder/` to `.builder.bak/` and starts fresh.
 
 ### Entry Point
 
@@ -73,7 +87,7 @@ Each round executes all 6 phases in sequence. The user selects the total number 
 
 - Analyzes verification results, test results, and overall code quality.
 - Produces a prioritized list of improvements for the next round.
-- On the final round: applies improvements directly instead of deferring.
+- On the final round: spawns a build sub-agent to apply the top-priority improvements directly to the codebase, then re-runs verification and tests.
 - Output: `.builder/improvements/round-N-improvements.md`.
 
 ## State Management
@@ -100,7 +114,7 @@ Each round executes all 6 phases in sequence. The user selects the total number 
 
 ### `state.json`
 
-Tracks execution progress:
+Tracks execution progress with per-round completion history:
 
 ```json
 {
@@ -109,7 +123,28 @@ Tracks execution progress:
   "current_phase": "build",
   "phase_status": "in_progress",
   "retry_count": 0,
-  "completed_phases": ["brainstorm", "research"]
+  "rounds": {
+    "1": {
+      "phases": {
+        "brainstorm": "completed",
+        "research": "completed",
+        "build": "completed",
+        "verify": "completed",
+        "test": "completed",
+        "improve": "completed"
+      }
+    },
+    "2": {
+      "phases": {
+        "brainstorm": "completed",
+        "research": "completed",
+        "build": "in_progress",
+        "verify": "pending",
+        "test": "pending",
+        "improve": "pending"
+      }
+    }
+  }
 }
 ```
 
@@ -121,21 +156,39 @@ Tracks execution progress:
 
 ## Claude Code SDK Layer
 
-### AgentManager
+`AgentManager` is an internal abstraction that wraps the `claude_agent_sdk` Python package. The SDK provides subprocess-based spawning of Claude Code instances. `AgentManager` adds retry logic, parallel dispatch, and result normalization on top of the raw SDK.
+
+### SDK Integration
+
+The `claude_agent_sdk` provides the low-level interface for creating Claude Code subprocesses. `AgentManager` wraps this to provide:
+
+- Consistent error handling and result types
+- Parallel agent dispatch with `asyncio.gather`
+- Retry logic with error context injection
 
 ```python
 class AgentManager:
-    async def spawn_agent(self, config: AgentConfig) -> AgentSession
-    async def spawn_parallel(self, configs: list[AgentConfig]) -> list[AgentSession]
-    async def run_with_retry(self, config: AgentConfig, max_retries: int = 3) -> AgentResult
+    async def spawn_agent(self, config: AgentConfig) -> AgentResult:
+        """Spawn a single Claude Code subagent via claude_agent_sdk.
+        Constructs the prompt from config, starts the subprocess,
+        streams output to the dashboard, and returns the result."""
+
+    async def spawn_parallel(self, configs: list[AgentConfig]) -> list[AgentResult]:
+        """Spawn multiple agents concurrently via asyncio.gather."""
+
+    async def run_with_retry(self, config: AgentConfig, max_retries: int = 3) -> AgentResult:
+        """Run an agent with self-healing retry. On failure, appends
+        error context to the prompt and retries."""
 ```
 
 ### AgentConfig
 
 - `system_prompt` — role and instructions for the phase
-- `context_files` — list of `.builder/` files to include
-- `allowed_tools` — tools the agent can use (file write, bash, web search, etc.)
+- `context_files` — list of `.builder/` files to include as context in the prompt
 - `working_directory` — where the agent operates
+- `timeout` — max execution time per agent (default: 10 minutes)
+
+Note: Claude Code subagents have access to all standard Claude Code tools (file I/O, bash, etc.) by default. Tool access is managed by the Claude Code environment, not by this orchestrator.
 
 ### AgentResult
 
@@ -143,23 +196,44 @@ class AgentManager:
 - `output: str` — agent's final response
 - `files_created: list[str]` — files written by the agent
 - `error: str | None` — error details if failed
+- `token_usage: int` — tokens consumed by this agent run
+
+## Phase Validation
+
+Each phase defines a `validate()` method on the `BasePhase` class that checks minimum acceptance criteria for the phase output. Validation failure triggers a retry.
+
+| Phase | Validation Criteria |
+|-------|-------------------|
+| Brainstorm | Output file exists and contains: features list, tech stack, file structure |
+| Research | Output file exists and contains at least one library recommendation |
+| Build | At least one source file was created/modified in the project directory |
+| Verify | Output file exists with a findings section |
+| Test | At least one test file exists and test runner executed (pass or fail) |
+| Improve | Output file exists with a prioritized improvements list |
 
 ## Self-Healing & Error Recovery
 
-1. Agent runs and fails (error, crash, or phase validation failure).
-2. Orchestrator captures the error.
+1. Agent runs and fails (hard error/crash, or `validate()` returns false).
+2. Orchestrator captures the error or validation failure details.
 3. Respawns agent with original context + error details: "Previous attempt failed with: {error}. Diagnose and fix."
 4. Repeats up to 3 times.
 5. After 3 failures: logs the issue, marks phase as `failed_skipped`, continues to next phase.
 
+For parallel sub-agents within a phase (e.g., Build spawning frontend + backend agents): if one sub-agent fails, only that sub-agent is retried. Successful sub-agent results are preserved.
+
+## Token Usage Tracking
+
+The orchestrator tracks cumulative token usage across all agents and rounds. Displayed in the TUI dashboard footer and written to `.builder/logs/token-usage.json` at the end of execution. Provides per-phase and per-round breakdowns.
+
 ## TUI Dashboard
 
-Live terminal UI built with `textual` showing real-time progress:
+Live terminal UI built with `textual` showing real-time progress. The orchestrator pushes events to the dashboard via an async message queue (`asyncio.Queue`). The dashboard runs as a `textual` app in the main thread, while the orchestrator runs in a background asyncio task.
 
 - **Header** — project name, current round/total, current phase
 - **Phase tracker** — checklist of all 6 phases with status indicators (complete, running, pending)
 - **Active agents** — live view of running agents with current activity descriptions
 - **Log stream** — scrolling log of recent events with timestamps
+- **Footer** — cumulative token usage, elapsed time, cancel hint (Ctrl+C)
 
 ## Project Structure
 
@@ -212,4 +286,5 @@ builder/
 - **`.builder/` metadata directory**: Keeps orchestration state separate from project output. Serves as communication channel between phases and a build record.
 - **Textual for TUI**: Full-featured TUI framework with proper resize, scrolling, and widget support — better than raw `rich.live` for a dashboard with multiple panels.
 - **Self-healing over fail-fast**: Autonomous operation requires resilience. Passing error context on retry lets agents diagnose their own failures.
-- **Prompt files as markdown**: Keeps system prompts readable, editable, and version-controlled separate from code.
+- **Prompt files as markdown**: Keeps system prompts readable, editable, and version-controlled separate from code. Loaded at runtime with Python string `.format()` for variable substitution (e.g., `{project_type}`, `{round_number}`). The orchestrator reads each `.md` file, substitutes variables, and prepends accumulated context files.
+- **Git commit per round**: The orchestrator creates a git commit at the end of each round to provide a snapshot of progress. This enables diffing between rounds and recovery if a later round introduces regressions.
