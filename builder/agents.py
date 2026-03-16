@@ -23,6 +23,29 @@ from builder.events import (
 from builder.models import AgentConfig, AgentResult
 
 
+# Monkeypatch the SDK's message parser to handle unknown message types
+# (e.g. rate_limit_event) gracefully instead of raising MessageParseError.
+# The SDK kills the async generator on unknown types, which is unrecoverable.
+import claude_code_sdk._internal.message_parser as _mp
+import claude_code_sdk._internal.client as _client
+
+_original_parse_message = _mp.parse_message
+
+
+def _patched_parse_message(data: dict):
+    try:
+        return _original_parse_message(data)
+    except Exception as e:
+        if "Unknown message type" in str(e):
+            return None
+        raise
+
+
+# Patch both the module and the client's local reference
+_mp.parse_message = _patched_parse_message
+_client.parse_message = _patched_parse_message
+
+
 class AgentManager:
     def __init__(self, event_queue: asyncio.Queue):
         self.event_queue = event_queue
@@ -60,6 +83,8 @@ class AgentManager:
 
         try:
             async for message in query(prompt=user_prompt, options=options):
+                if message is None:
+                    continue
                 if isinstance(message, AssistantMessage):
                     for block in message.content:
                         if isinstance(block, TextBlock):

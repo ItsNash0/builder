@@ -10,9 +10,16 @@ class ImprovePhase(BasePhase):
         config = self._get_agent_config(round_number)
         if is_final_round:
             config.system_prompt += (
-                "\n\nThis is the FINAL round. Apply the top-priority improvements "
-                "directly to the codebase instead of just listing them. "
-                "After applying fixes, run any existing tests to verify nothing broke."
+                "\n\n## FINAL ROUND — DELIVERY MODE"
+                "\n\nThis is the FINAL round. You must:"
+                "\n1. Apply ALL P0 and P1 improvements directly to the codebase"
+                "\n2. Run through the Delivery Readiness Checklist and fix every failing item"
+                "\n3. Verify the app starts and runs correctly (actually run it)"
+                "\n4. Run all existing tests — fix any failures"
+                "\n5. Ensure the README is complete and accurate with copy-paste commands"
+                "\n6. Remove any debug code, console.logs used for debugging, TODO comments"
+                "\n7. Do a final verification: install deps → start app → curl/test → confirm it works"
+                "\n\nThe user will receive this project as-is. It must work out of the box."
             )
         result = await self.agent_manager.spawn_agent(config, prompt=self._build_task_prompt(round_number))
         if result.success:

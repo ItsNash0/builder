@@ -84,7 +84,7 @@ class BuilderDashboard(App):
         self.total_rounds = total_rounds
         self.current_round = 1
         self._active_agents: dict[str, str] = {}
-        self._start_time = datetime.now()
+        self._elapsed_start = datetime.now()
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -103,7 +103,7 @@ class BuilderDashboard(App):
         asyncio.get_running_loop().create_task(self._consume_events())
 
     def _update_elapsed(self) -> None:
-        delta = datetime.now() - self._start_time
+        delta = datetime.now() - self._elapsed_start
         hours, remainder = divmod(int(delta.total_seconds()), 3600)
         minutes, seconds = divmod(remainder, 60)
         self.query_one("#status-bar", StatusBar).elapsed = f"{hours}:{minutes:02d}:{seconds:02d}"

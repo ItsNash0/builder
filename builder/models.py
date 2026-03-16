@@ -42,6 +42,7 @@ class BuilderConfig(BaseModel):
     prompt: str
     project_type: ProjectType
     rounds: int = Field(default=3, ge=1, le=10)
+    existing_project: bool = False
 
 
 class RoundState(BaseModel):

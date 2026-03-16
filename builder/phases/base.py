@@ -31,15 +31,30 @@ class BasePhase(abc.ABC):
 
     def _build_system_prompt(self, round_number: int) -> str:
         template = self._load_prompt_template()
-        return template.format(
+        prompt = template.format(
             project_type=self.config.project_type.value,
             round_number=round_number,
             total_rounds=self.config.rounds,
             user_prompt=self.config.prompt,
         )
+        if self.config.existing_project:
+            prompt += (
+                "\n\n## EXISTING PROJECT MODE"
+                "\n\nThis is an EXISTING project with code already in the working directory. "
+                "You MUST:"
+                "\n1. First explore and understand the existing codebase (read files, check structure)"
+                "\n2. Identify the tech stack, frameworks, and patterns already in use"
+                "\n3. Work WITH the existing code — do not rewrite from scratch"
+                "\n4. Preserve existing functionality while making improvements"
+                "\n5. If the existing code doesn't work, fix it before adding anything new"
+            )
+        return prompt
 
     def _build_task_prompt(self, round_number: int) -> str:
-        parts = [f"Build the following: {self.config.prompt}"]
+        if self.config.existing_project:
+            parts = [f"Work on the existing project: {self.config.prompt}"]
+        else:
+            parts = [f"Build the following: {self.config.prompt}"]
         context_files = self.context.get_context_files(round_number, self.name)
         for filepath in context_files:
             path = Path(filepath)
