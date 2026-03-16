@@ -777,7 +777,7 @@ async def test_events_emitted_on_spawn(manager, sample_config, event_queue):
         yield msg
 
     with patch("builder.agents.query", side_effect=mock_query):
-        await manager.spawn_agent(sample_config, context="Test")
+        await manager.spawn_agent(sample_config, prompt="Test")
 
     events = []
     while not event_queue.empty():
