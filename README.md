@@ -98,11 +98,16 @@ Stacks are chosen for **testability** — every project can be built, run, and v
 ### Install
 
 ```bash
-# Clone the repo
+pip install git+https://github.com/ItsNash0/builder.git
+```
+
+That's it. This installs the `builder` command globally.
+
+### Install from source (for development)
+
+```bash
 git clone https://github.com/ItsNash0/builder.git
 cd builder
-
-# Install in development mode
 pip install -e ".[dev]"
 ```
 
