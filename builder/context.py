@@ -13,9 +13,11 @@ from builder.models import (
 PHASE_OUTPUT_MAP = {
     "brainstorm": ("specs", "round-{round}-spec.md"),
     "research": ("research", "round-{round}-research.md"),
+    "design": ("design", "round-{round}-design.md"),
+    "setup": ("setup", "round-{round}-setup.md"),
     "build": ("", ""),
-    "verify": ("verification", "round-{round}-verify.md"),
     "test": ("testing", "round-{round}-results.md"),
+    "verify": ("verification", "round-{round}-verify.md"),
     "improve": ("improvements", "round-{round}-improvements.md"),
 }
 
@@ -27,7 +29,7 @@ class ProjectContext:
 
     def initialize(self, config: BuilderConfig) -> None:
         self.builder_dir.mkdir(exist_ok=True)
-        for subdir in ["specs", "research", "verification", "testing", "improvements", "logs"]:
+        for subdir in ["specs", "research", "design", "setup", "verification", "testing", "improvements", "logs"]:
             (self.builder_dir / subdir).mkdir(exist_ok=True)
         config_path = self.builder_dir / "config.json"
         config_path.write_text(config.model_dump_json(indent=2))
@@ -85,9 +87,11 @@ class ProjectContext:
     CONTEXT_PRIORITY = {
         "brainstorm": [],
         "research": ["brainstorm"],
-        "build": ["brainstorm", "research"],
+        "design": ["brainstorm"],
+        "setup": ["brainstorm", "research", "design"],
+        "build": ["brainstorm", "research", "design"],
+        "test": ["brainstorm"],
         "verify": ["brainstorm"],
-        "test": ["brainstorm", "verify"],
         "improve": ["brainstorm", "verify", "test"],
     }
 
@@ -98,7 +102,7 @@ class ProjectContext:
             files.append(str(config_path))
         # Include project CLAUDE.md for verify/test/improve
         claude_md = self.project_dir / "CLAUDE.md"
-        if claude_md.exists() and phase_name in ("verify", "test", "improve"):
+        if claude_md.exists() and phase_name in ("build", "test", "verify", "improve"):
             files.append(str(claude_md))
         # Priority-based context: only include what's relevant
         priority_phases = self.CONTEXT_PRIORITY.get(phase_name, [])

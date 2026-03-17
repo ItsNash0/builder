@@ -20,7 +20,7 @@ class PhaseStatus(StrEnum):
     FAILED_SKIPPED = "failed_skipped"
 
 
-PHASE_NAMES = ["brainstorm", "research", "build", "verify", "test", "improve"]
+PHASE_NAMES = ["brainstorm", "research", "design", "setup", "build", "test", "verify", "improve"]
 
 
 class AgentConfig(BaseModel):

@@ -11,7 +11,7 @@ from builder.repomap import generate_repo_map
 MAX_CONTEXT_CHARS = 50000  # Cap context per file to prevent prompt explosion
 
 # Phases that benefit from a repo map (codebase awareness without full files)
-REPO_MAP_PHASES = {"verify", "test", "improve"}
+REPO_MAP_PHASES = {"build", "test", "verify", "improve"}
 
 
 class BasePhase(abc.ABC):

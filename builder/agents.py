@@ -56,20 +56,26 @@ PHASE_TOOL_SCOPES = {
     "research": [
         "Read", "Glob", "Grep", "Bash", "WebSearch", "WebFetch",
     ],
-    "build": None,  # Full access
-    "verify": None,  # Full access — needs to run app & fix code
-    "test": None,    # Full access — needs to run app & fix code
-    "improve": None, # Full access on final round
+    "design": [
+        "Read", "Glob", "Grep", "Bash", "Write",
+    ],
+    "setup": None,   # Full access — needs to scaffold, install, configure
+    "build": None,   # Full access — writes all app code
+    "test": None,    # Full access — runs app, writes & runs tests
+    "verify": None,  # Full access — runs app, fixes issues
+    "improve": None, # Full access — fixes everything
 }
 
 # Phase-dependent max_turns — brainstorm needs few, build needs many
 PHASE_MAX_TURNS = {
     "brainstorm": 25,
     "research": 30,
+    "design": 30,
+    "setup": 75,
     "build": 100,
-    "verify": 50,
     "test": 75,
-    "improve": 50,
+    "verify": 50,
+    "improve": 75,
 }
 
 # Rate limit retry config
@@ -77,14 +83,16 @@ MAX_SPAWN_RETRIES = 5
 BASE_RETRY_DELAY = 2.0   # seconds
 MAX_RETRY_DELAY = 120.0  # seconds
 
-# Per-phase model routing — offload heavy coding/testing to Sonnet
+# Per-phase model routing — Opus for creative/judgment, Sonnet for coding/testing
 PHASE_MODEL = {
-    "brainstorm": None,              # Default (Opus) — creative planning
-    "research": None,                # Default (Opus) — analysis
+    "brainstorm": None,              # Opus — creative product design
+    "research": None,                # Opus — deep analysis
+    "design": None,                  # Opus — creative design decisions
+    "setup": "claude-sonnet-4-6",    # Sonnet — scaffolding, deps, config
     "build": "claude-sonnet-4-6",    # Sonnet — fast, great at coding
-    "verify": None,                  # Default (Opus) — judgment calls
     "test": "claude-sonnet-4-6",     # Sonnet — fast, great at testing
-    "improve": None,                 # Default (Opus) — architectural decisions
+    "verify": None,                  # Opus — judgment, security, quality
+    "improve": None,                 # Opus — architectural fix decisions
 }
 
 # Fallback model chain (when primary keeps failing)

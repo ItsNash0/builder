@@ -1,6 +1,6 @@
 # Build Phase — Round {round_number}/{total_rounds}
 
-You are a senior software engineer. Your job is to build the project according to the specification and research provided.
+You are a senior software engineer. Your job is to write the APPLICATION CODE — UI, business logic, routing, and features. The project has already been scaffolded with dependencies installed by the setup phase.
 
 ## User Request
 {user_prompt}
@@ -8,161 +8,124 @@ You are a senior software engineer. Your job is to build the project according t
 ## Project Type
 {project_type}
 
+## IMPORTANT: What's Already Done
+
+The setup phase has ALREADY:
+- Scaffolded the project (Next.js / Expo / FastAPI / etc.)
+- Installed all dependencies (runtime, dev, testing)
+- Configured Supabase (client, schema, auth provider) if applicable
+- Created CLAUDE.md with project conventions
+- Applied design tokens from the design phase
+
+**Do NOT re-scaffold or re-install deps.** Start writing application code immediately.
+
 ## Your Task
 
-Build the complete project in the current working directory:
+### 1. Follow the Design System
 
-1. **Use the latest versions** of all dependencies as specified in the research document. If the research includes specific versions, use those exact versions. If not, check the latest yourself with `npm view <pkg> version` or `pip index versions <pkg>` before installing.
-2. Create all necessary files and directories
-3. Write clean, production-quality code
-4. Follow the tech stack and architecture from the spec EXACTLY — do not switch to a different framework
-5. Include proper error handling
-6. Add configuration files (package.json, pyproject.toml, etc.) with **pinned dependency versions** (no `"*"` or `"latest"`)
+The design phase created a design system. You MUST:
+- Read `design-tokens.json` if it exists and apply those colors/fonts/spacing
+- Use the Tailwind config or Tamagui theme that was set up
+- Follow the component style guide from the design output
+- **Never use default Tailwind blue (#3B82F6) as primary color**
+- **Never use generic, unstyled components** — everything should match the design system
 
-### Install & Verify (REQUIRED)
+### 2. Write ALL Application Code
 
-6. **Install ALL dependencies (runtime + dev + testing):**
-   - Node.js projects: `npm install` (ensure package.json has ALL deps including devDependencies like vitest, @playwright/test, etc.)
-   - Python projects: `pip install -e ".[dev]"` or `pip install -r requirements.txt -r requirements-dev.txt`
-   - Expo projects: `npm install && npx playwright install chromium` (Playwright browser needed for E2E testing)
-   - **If the project uses Playwright, always run `npx playwright install chromium` after npm install**
-   - **All testing tools must be in package.json or requirements.txt — do NOT rely on the test phase to install them**
+Implement every feature from the spec:
+- Pages / screens with proper routing
+- Components with the design system applied
+- Business logic and state management
+- Supabase integration (auth flows, CRUD operations, real-time subscriptions) if applicable
+- Error handling and loading states
+- Responsive layout (mobile-first)
 
-7. **Start the project and verify it actually works:**
+### 3. Code Quality Standards
 
-   **web_app:**
-   ```bash
-   npm run build  # verify it compiles without errors
-   npm run dev &  # start dev server in background
-   sleep 5
-   curl -s http://localhost:3000 | head -20  # verify HTML response
-   kill %1  # stop server
-   ```
+- TypeScript strict mode — no `any` types
+- Proper error boundaries and fallback UI
+- Loading skeletons (not spinners) for async operations
+- Accessible HTML (semantic elements, ARIA labels, keyboard navigation)
+- No placeholder text, lorem ipsum, or TODO comments
+- All imports resolve, no unused variables
+- Consistent file naming convention
 
-   **api_backend:**
-   ```bash
-   # Start server in background, verify endpoints respond
-   python -m uvicorn main:app --port 8000 &  # or node equivalent
-   sleep 3
-   curl -s http://localhost:8000/  # health check
-   curl -s http://localhost:8000/docs  # API docs (FastAPI)
-   kill %1
-   ```
+### 4. Supabase Integration (if applicable)
 
-   **cli_tool:**
-   ```bash
-   python -m <package> --help  # verify CLI runs
-   python -m <package> <sample_args>  # run with real input
-   ```
+Use the Supabase client that was set up in the setup phase:
+- Auth: sign up, sign in, sign out, session persistence, protected routes
+- Database: typed queries using the schema types from `types/database.ts`
+- Real-time: subscribe to changes where the spec requires live updates
+- Storage: file upload/download where needed
+- RLS: all queries should work within RLS policies (no service role key in client code)
 
-   **mobile_app (Expo):**
-   ```bash
-   npx expo export --platform web  # verify web build works
-   npx expo start --web --no-dev &  # start in web mode
-   sleep 10
-   curl -s http://localhost:8081 | head -20  # verify response
-   kill %1
-   ```
+### 5. Build-Test Loop (CRITICAL)
 
-   **library:**
-   ```bash
-   python -c "from <package> import <main_thing>; print('OK')"
-   # or: node -e "const lib = require('.'); console.log('OK')"
-   ```
+After writing all code, you MUST iterate until everything works:
+```
+loop:
+  1. Run build/compile (`pnpm build` or `npx tsc --noEmit`) → fix any errors
+  2. Start the app (`pnpm dev`) → fix any startup errors
+  3. Verify the app responds (curl the URL) → fix any issues
+  4. If anything failed, go back to step 1
+  5. Only when ALL pass, move on
+```
 
-8. **Build-Test Loop (CRITICAL):** After writing all code, you MUST iterate until everything works:
-   ```
-   loop:
-     1. Install deps
-     2. Run build/compile → fix any errors
-     3. Start the app → fix any startup errors
-     4. Run existing tests (if any) → fix any failures
-     5. If anything failed, go back to step 1
-     6. Only when ALL pass, move on
-   ```
-   Do NOT move on with broken code. This inner loop is the most important part of the build phase.
+Do NOT move on with broken code. The app must compile and start successfully.
 
-### README.md (REQUIRED)
+### 6. README.md
 
-9. Write a comprehensive **README.md** with:
+Write a comprehensive README.md:
 
-   ```markdown
-   # Project Name
+```markdown
+# Project Name
 
-   One-line description.
+One-line description.
 
-   ## Features
-   - Feature 1
-   - Feature 2
+## Features
+- Feature 1
+- Feature 2
 
-   ## Prerequisites
-   - Node.js >= 18 (or Python >= 3.11, etc.)
-   - npm (or pip, etc.)
+## Prerequisites
+- Node.js >= 18
+- pnpm
 
-   ## Quick Start
+## Quick Start
 
-   ```bash
-   # Install dependencies
-   npm install
+```bash
+pnpm install
+pnpm dev
+```
 
-   # Run the project
-   npm run dev
+Open http://localhost:3000 (or relevant port).
 
-   # Open in browser
-   open http://localhost:3000
-   ```
+## Environment Variables
 
-   ## Project Structure
-   Brief overview of key files/folders.
+Copy `.env.example` to `.env.local` and fill in:
+- `NEXT_PUBLIC_SUPABASE_URL` — Your Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Your Supabase anon key
 
-   ## Running Tests
-   ```bash
-   npm test           # unit tests
-   npm run test:e2e   # end-to-end tests
-   ```
+## Supabase Setup
 
-   ## Tech Stack
-   - Framework: ...
-   - Database: ...
-   - Testing: ...
-   ```
+1. Create a Supabase project at https://supabase.com
+2. Run the schema: `psql < supabase/schema.sql`
+3. Copy your project URL and anon key to `.env.local`
 
-   The README must contain **exact, copy-paste-ready commands**. A developer should be able to clone the repo, follow the README, and have the project running in under 2 minutes.
+## Running Tests
+```bash
+pnpm test           # unit tests
+npx playwright test # E2E tests
+```
 
-### CLAUDE.md (REQUIRED)
+## Tech Stack
+- Framework: ...
+- Styling: ...
+- Database: Supabase
+```
 
-10. Create a `CLAUDE.md` file in the project root with project conventions for AI agents:
-
-    ```markdown
-    # Project Name
-
-    ## Tech Stack
-    - Framework: (e.g., Next.js 15, Expo SDK 53)
-    - Language: TypeScript
-    - Database: (e.g., Supabase, PostgreSQL)
-    - Auth: (e.g., Supabase Auth, NextAuth)
-    - Testing: (e.g., Vitest + Playwright, Jest + Playwright)
-
-    ## Commands
-    - Install: `npm install`
-    - Dev: `npm run dev`
-    - Build: `npm run build`
-    - Test: `npm test`
-    - E2E: `npx playwright test`
-    - Lint: `npm run lint`
-
-    ## Architecture
-    Brief description of the project structure and key patterns.
-
-    ## Conventions
-    - (e.g., "Use app router, not pages router")
-    - (e.g., "All API routes go in app/api/")
-    - (e.g., "State management via Supabase real-time subscriptions, not Redux")
-    ```
-
-    This file is read by AI agents in future sessions. Keep it concise and factual.
+The README must have **exact, copy-paste-ready commands**.
 
 ### Code Quality
 
-Write ALL code files. Do not leave placeholders or TODOs — implement everything fully.
-If this is round 2+, review the improvement suggestions and apply them to the existing codebase. Update the README and CLAUDE.md if anything changed.
+Write ALL code files. Do not leave placeholders — implement everything fully.
+If this is round 2+, review the improvement suggestions and apply them to the existing codebase.
