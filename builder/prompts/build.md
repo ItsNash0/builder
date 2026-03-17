@@ -21,10 +21,12 @@ Build the complete project in the current working directory:
 
 ### Install & Verify (REQUIRED)
 
-6. **Install all dependencies:**
-   - Node.js projects: `npm install`
-   - Python projects: `pip install -e .` or `pip install -r requirements.txt`
-   - Expo projects: `npm install`
+6. **Install ALL dependencies (runtime + dev + testing):**
+   - Node.js projects: `npm install` (ensure package.json has ALL deps including devDependencies like vitest, @playwright/test, etc.)
+   - Python projects: `pip install -e ".[dev]"` or `pip install -r requirements.txt -r requirements-dev.txt`
+   - Expo projects: `npm install && npx playwright install chromium` (Playwright browser needed for E2E testing)
+   - **If the project uses Playwright, always run `npx playwright install chromium` after npm install**
+   - **All testing tools must be in package.json or requirements.txt — do NOT rely on the test phase to install them**
 
 7. **Start the project and verify it actually works:**
 
@@ -117,7 +119,40 @@ Build the complete project in the current working directory:
 
    The README must contain **exact, copy-paste-ready commands**. A developer should be able to clone the repo, follow the README, and have the project running in under 2 minutes.
 
+### CLAUDE.md (REQUIRED)
+
+10. Create a `CLAUDE.md` file in the project root with project conventions for AI agents:
+
+    ```markdown
+    # Project Name
+
+    ## Tech Stack
+    - Framework: (e.g., Next.js 15, Expo SDK 53)
+    - Language: TypeScript
+    - Database: (e.g., SpacetimeDB, Supabase, PostgreSQL)
+    - Auth: (e.g., Clerk, NextAuth)
+    - Testing: (e.g., Vitest + Playwright, Jest + Playwright)
+
+    ## Commands
+    - Install: `npm install`
+    - Dev: `npm run dev`
+    - Build: `npm run build`
+    - Test: `npm test`
+    - E2E: `npx playwright test`
+    - Lint: `npm run lint`
+
+    ## Architecture
+    Brief description of the project structure and key patterns.
+
+    ## Conventions
+    - (e.g., "Use app router, not pages router")
+    - (e.g., "All API routes go in app/api/")
+    - (e.g., "State management via SpacetimeDB subscriptions, not Redux")
+    ```
+
+    This file is read by AI agents in future sessions. Keep it concise and factual.
+
 ### Code Quality
 
 Write ALL code files. Do not leave placeholders or TODOs — implement everything fully.
-If this is round 2+, review the improvement suggestions and apply them to the existing codebase. Update the README if anything changed.
+If this is round 2+, review the improvement suggestions and apply them to the existing codebase. Update the README and CLAUDE.md if anything changed.

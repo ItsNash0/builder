@@ -74,6 +74,7 @@ class Orchestrator:
             success = await self._run_phase(phase, round_number)
             status = PhaseStatus.COMPLETED if success else PhaseStatus.FAILED_SKIPPED
             self.context.update_phase_status(round_number, phase_name, status)
+            self._git_checkpoint(round_number, phase_name, success)
 
         if not self._cancelled:
             state = self.context.load_state()
@@ -150,6 +151,19 @@ class Orchestrator:
         git_dir = self.context.project_dir / ".git"
         if not git_dir.exists():
             subprocess.run(["git", "init"], cwd=self.context.project_dir, capture_output=True)
+
+    def _git_checkpoint(self, round_number: int, phase_name: str, success: bool) -> None:
+        """Commit after each phase for mid-round rollback support."""
+        status = "completed" if success else "failed"
+        try:
+            subprocess.run(["git", "add", "-A"], cwd=self.context.project_dir, capture_output=True)
+            subprocess.run(
+                ["git", "commit", "-m", f"builder: round {round_number} - {phase_name} {status}"],
+                cwd=self.context.project_dir,
+                capture_output=True,
+            )
+        except Exception:
+            pass
 
     def _git_commit_round(self, round_number: int) -> None:
         try:
