@@ -129,8 +129,8 @@ Build the complete project in the current working directory:
     ## Tech Stack
     - Framework: (e.g., Next.js 15, Expo SDK 53)
     - Language: TypeScript
-    - Database: (e.g., SpacetimeDB, Supabase, PostgreSQL)
-    - Auth: (e.g., Clerk, NextAuth)
+    - Database: (e.g., Supabase, PostgreSQL)
+    - Auth: (e.g., Supabase Auth, NextAuth)
     - Testing: (e.g., Vitest + Playwright, Jest + Playwright)
 
     ## Commands
@@ -147,7 +147,7 @@ Build the complete project in the current working directory:
     ## Conventions
     - (e.g., "Use app router, not pages router")
     - (e.g., "All API routes go in app/api/")
-    - (e.g., "State management via SpacetimeDB subscriptions, not Redux")
+    - (e.g., "State management via Supabase real-time subscriptions, not Redux")
     ```
 
     This file is read by AI agents in future sessions. Keep it concise and factual.

@@ -81,7 +81,7 @@ At the end, you have a **complete, tested, documented project** with a README, s
 | Type | Stack | Testing |
 |------|-------|---------|
 | **Web App** | Next.js + TypeScript | Playwright E2E + Vitest |
-| **Mobile App** | React Native + Expo + SpacetimeDB + Clerk | Playwright (web mode) + Jest |
+| **Mobile App** | React Native + Expo + Supabase | Playwright (web mode) + Jest |
 | **API / Backend** | FastAPI or Express + TypeScript | pytest/Vitest + httpx |
 | **CLI Tool** | Python + Click/Typer | pytest |
 | **Library** | Python or TypeScript | pytest/Vitest |

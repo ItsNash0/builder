@@ -34,14 +34,13 @@ You MUST use these tech stacks based on the project type. These are chosen becau
   - Dev/testing: `pytest` / `vitest`, `typescript`
   - Test: `pytest` / `npm test`
 
-- **mobile_app**: React Native with Expo + SpacetimeDB (real-time database) + Clerk (authentication).
-  - Runtime: `expo`, `react-native`, `react`, `expo-router`, `spacetimedb`, `@clerk/clerk-expo`, `expo-secure-store`, `expo-auth-session`, `expo-web-browser`
+- **mobile_app**: React Native with Expo + Supabase (database, auth, real-time, storage).
+  - Runtime: `expo`, `react-native`, `react`, `expo-router`, `@supabase/supabase-js`, `expo-secure-store`
   - Dev/testing: `typescript`, `@types/react`, `jest`, `jest-expo`, `@playwright/test`, `react-test-renderer`
   - Run: `npx expo start --web` (web mode — no emulator needed)
   - Test: `npm test` (jest), `npx playwright test` (E2E via web mode)
   - Post-install: `npx playwright install chromium`
-  - **SpacetimeDB**: Real-time database + server. Write server modules in Rust or TypeScript, generate client bindings with `spacetime generate`. Clients connect via WebSocket for real-time sync. Requires SpacetimeDB CLI (`curl -sSf https://install.spacetimedb.com | sh`) and a local server (`spacetime start` or `spacetime dev`). Use the `spacetimedb` npm package (v2.0+), NOT the deprecated `@clockworklabs/spacetimedb-sdk`. Note: the `spacetimedb/react` hooks are web-only; for React Native, use the base TypeScript SDK with manual state management.
-  - **Clerk**: Auth provider. Use `@clerk/clerk-expo` for Expo. Wrap app in `<ClerkProvider>` with `tokenCache` from `@clerk/expo/token-cache`. Use `useAuth()`, `useSignIn()`, `useSignUp()` hooks. Requires a Clerk publishable key (env var `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`). For testing without a real Clerk account, implement a mock auth provider that can be toggled via env var.
+  - **Supabase**: Use the full Supabase stack — database (Postgres), auth, real-time subscriptions, and storage. Use `@supabase/supabase-js` client. Wrap app with a Supabase provider. Use `supabase.auth.signInWithPassword()`, `supabase.from('table').select()`, real-time via `supabase.channel()`. Requires `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` env vars. For testing without a real Supabase project, use Supabase local dev (`npx supabase start`) or mock the client.
   - The app MUST work on both native (iOS/Android) AND web.
 
 - **other**: Pick the simplest stack that can be run and verified from a terminal. Prefer Python or Node.js/TypeScript. Always include a test framework.
