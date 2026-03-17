@@ -27,19 +27,30 @@ Pretend you just cloned this repo. Follow the README EXACTLY:
 
 ### Step 2: Smoke Test — Actually USE the App
 
-Start the application and interact with it like a real user using Playwright:
+Start the application and interact with it like a real user using Playwright + Lightpanda:
+
+**IMPORTANT: Use Lightpanda browser instead of Chromium.** Lightpanda is a lightweight headless browser that's 11x faster and uses 9x less memory than Chrome. It's already installed on this system.
+
+To connect Playwright to Lightpanda:
+1. Start Lightpanda: `lightpanda serve --host 127.0.0.1 --port 9222 &`
+2. Connect via CDP: `chromium.connectOverCDP('http://127.0.0.1:9222')`
+3. Do NOT use `chromium.launch()` — always use `connectOverCDP`
+4. Do NOT run `npx playwright install chromium` — Lightpanda replaces it
 
 **web_app / mobile_app (Expo web):**
 
 1. Start the app in the background
-2. Write a smoke test that **actually interacts with the UI**:
+2. Start Lightpanda: `lightpanda serve --host 127.0.0.1 --port 9222 &`
+3. Write a smoke test that **actually interacts with the UI**:
 
 ```javascript
 // smoke-test.mjs
 import {{ chromium }} from 'playwright';
 
-const browser = await chromium.launch();
-const page = await browser.newPage();
+// Connect to Lightpanda (NOT chromium.launch())
+const browser = await chromium.connectOverCDP('http://127.0.0.1:9222');
+const context = browser.contexts()[0] || await browser.newContext();
+const page = context.pages()[0] || await context.newPage();
 await page.goto('http://localhost:3000');
 
 // 1. Verify page loads with real content
@@ -119,7 +130,38 @@ If the app uses Supabase or any online features, test them FOR REAL:
 
 ---
 
-### Step 4: E2E Tests with Playwright
+### Step 4: E2E Tests with Playwright + Lightpanda
+
+**Configure Playwright to use Lightpanda.** Create or update `playwright.config.ts`:
+
+```typescript
+// playwright.config.ts
+import {{ defineConfig }} from '@playwright/test';
+
+export default defineConfig({{
+  testDir: './e2e',
+  use: {{
+    // Connect to Lightpanda instead of launching Chromium
+    connectOptions: {{
+      wsEndpoint: 'ws://127.0.0.1:9222',
+    }},
+    baseURL: 'http://localhost:3000', // or 8081 for Expo
+  }},
+  // Start Lightpanda before tests
+  webServer: [
+    {{
+      command: 'lightpanda serve --host 127.0.0.1 --port 9222',
+      port: 9222,
+      reuseExistingServer: true,
+    }},
+    {{
+      command: 'pnpm dev',
+      port: 3000, // adjust for your app
+      reuseExistingServer: true,
+    }},
+  ],
+}});
+```
 
 Write proper Playwright test files that test EACH feature from the spec:
 
@@ -129,7 +171,7 @@ import {{ test, expect }} from '@playwright/test';
 
 test.describe('Core Features', () => {{
   test.beforeEach(async ({{ page }}) => {{
-    await page.goto('http://localhost:3000');
+    await page.goto('/');
   }});
 
   // Write a test for EACH core feature

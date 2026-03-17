@@ -17,14 +17,14 @@ You MUST use these opinionated tech stacks. They are chosen for speed, quality, 
   - Runtime: `astro`, `@astrojs/tailwind`, `tailwindcss`
   - Dev/testing: `typescript`, `@playwright/test`
   - Run: `pnpm dev` | Build: `pnpm build`
-  - Post-install: `npx playwright install chromium`
+  - E2E browser: Lightpanda (headless, already installed — connect via `chromium.connectOverCDP('http://127.0.0.1:9222')`)
 
 - **web_app (interactive application)**: Next.js + Tailwind CSS + shadcn/ui.
   - Package manager: `pnpm`
   - Runtime: `next`, `react`, `react-dom`, `tailwindcss`, `@shadcn/ui`
   - Dev/testing: `typescript`, `@types/react`, `@types/node`, `vitest`, `@playwright/test`
   - Run: `pnpm dev` | Build: `pnpm build` | Test: `pnpm test`, `npx playwright test`
-  - Post-install: `npx playwright install chromium`
+  - E2E browser: Lightpanda (headless, already installed — connect via `chromium.connectOverCDP('http://127.0.0.1:9222')`)
   - If needs backend/database: add **Supabase** (`@supabase/supabase-js`, `@supabase/ssr`)
 
 - **mobile_app**: Expo + React Native + Tamagui + Expo Router + Supabase.
@@ -33,7 +33,7 @@ You MUST use these opinionated tech stacks. They are chosen for speed, quality, 
   - Dev/testing: `typescript`, `@types/react`, `jest`, `jest-expo`, `@playwright/test`
   - Run: `npx expo start --web` (web mode — no emulator needed)
   - Test: `pnpm test` (jest), `npx playwright test` (E2E via web)
-  - Post-install: `npx playwright install chromium`
+  - E2E browser: Lightpanda (headless, already installed — connect via `chromium.connectOverCDP('http://127.0.0.1:9222')`)
   - **Tamagui** for UI: custom themed components, NOT React Native Paper or NativeBase
   - **Supabase** for backend: database (Postgres), auth, real-time subscriptions, storage
   - Must work on both native (iOS/Android) AND web

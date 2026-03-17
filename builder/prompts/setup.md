@@ -71,7 +71,7 @@ Install everything from the spec and research recommendations. This includes:
 - Runtime dependencies
 - Dev dependencies (TypeScript, linters)
 - Testing tools (vitest/jest, Playwright, pytest)
-- Browser binaries for E2E: `npx playwright install chromium`
+- Do NOT run `npx playwright install chromium` — we use Lightpanda browser instead (already installed on the system)
 
 **Verify installation works:** Run `pnpm install` (or pip install) and check for zero errors.
 

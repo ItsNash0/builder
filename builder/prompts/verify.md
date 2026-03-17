@@ -20,15 +20,16 @@ Actually run the project and USE IT like a real person would:
 4. **Actually interact with it:**
 
    **web_app / mobile_app:**
-   - Install Playwright if not already installed: `npm install -D @playwright/test && npx playwright install chromium`
-   - Write a quick verification script that opens the app in a real browser:
+   - Ensure Playwright is installed: `pnpm add -D @playwright/test`
+   - Start Lightpanda browser: `lightpanda serve --host 127.0.0.1 --port 9222 &`
+   - Write a verification script that connects to Lightpanda:
      ```javascript
      import {{ chromium }} from 'playwright';
-     const browser = await chromium.launch();
-     const page = await browser.newPage();
+     // Connect to Lightpanda via CDP (NOT chromium.launch())
+     const browser = await chromium.connectOverCDP('http://127.0.0.1:9222');
+     const context = browser.contexts()[0] || await browser.newContext();
+     const page = context.pages()[0] || await context.newPage();
      await page.goto('http://localhost:3000'); // or 8081 for Expo
-     // Take screenshot to see what the user sees
-     await page.screenshot({{ path: 'verify-screenshot.png', fullPage: true }});
      // Check for JS errors
      const errors = [];
      page.on('console', msg => {{ if (msg.type() === 'error') errors.push(msg.text()); }});
