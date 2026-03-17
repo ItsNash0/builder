@@ -43,10 +43,21 @@ You MUST use these opinionated tech stacks. They are chosen for speed, quality, 
   - Dev/testing: `pytest`, `pytest-cov`
   - Run: `python -m <package>` | Test: `pytest`
 
-- **api_backend**: Python with FastAPI + Supabase.
+- **api_backend (simple / real-time)**: Python with FastAPI + Supabase.
   - Runtime: `fastapi`, `uvicorn`, `pydantic`, `supabase`
   - Dev/testing: `pytest`, `httpx`, `pytest-asyncio`
   - Run: `uvicorn main:app` | Test: `pytest`
+
+- **api_backend (complex / full-featured)**: Laravel (PHP).
+  - Use when the project needs: complex server-side logic, job queues, scheduled tasks, multi-tenant architecture, admin panels, complex authorization, file processing pipelines, or webhooks.
+  - Runtime: `laravel/laravel`, `php >= 8.2`, `composer`
+  - Database: MySQL or PostgreSQL (via Laravel's Eloquent ORM)
+  - Auth: Laravel Breeze or Sanctum (API tokens)
+  - Dev/testing: `phpunit`, `pestphp/pest`, Laravel Dusk (browser testing)
+  - Run: `php artisan serve` | Test: `php artisan test`
+  - Queue/Jobs: Laravel Queue with database or Redis driver
+  - API: Laravel API resources with route:api middleware
+  - **When to choose Laravel over Supabase:** If the user's request involves complex business logic that goes beyond CRUD, background processing, scheduled tasks, complex authorization rules, or if they explicitly mention Laravel/PHP.
 
 - **library**: Python or TypeScript npm package.
   - Dev/testing: `pytest` / `vitest`, `typescript`
@@ -54,16 +65,24 @@ You MUST use these opinionated tech stacks. They are chosen for speed, quality, 
 
 - **other**: Pick the simplest stack that works. Prefer Python or TypeScript. Always use pnpm for JS.
 
-### Backend: Always Supabase
+### Backend: Supabase (default) or Laravel (complex APIs)
 
-If the app needs ANY of these, use Supabase:
+**Default — Supabase** for apps needing:
 - User authentication → Supabase Auth
 - Database / data storage → Supabase Postgres
 - Real-time features → Supabase Realtime (channels, presence)
 - File uploads / media → Supabase Storage
 - API / server functions → Supabase Edge Functions
 
-Do NOT use: Firebase, Prisma, Drizzle, MongoDB, or custom auth. Supabase handles it all.
+**Alternative — Laravel** for apps needing:
+- Complex server-side business logic beyond CRUD
+- Background job queues and scheduled tasks
+- Multi-tenant architecture or complex authorization
+- Admin panels with heavy server rendering
+- Webhook processing pipelines
+- The user explicitly requests Laravel/PHP
+
+Do NOT use: Firebase, Prisma, Drizzle, MongoDB, or custom auth. Choose between Supabase (simple/real-time) or Laravel (complex/server-heavy).
 
 ### Design Quality
 

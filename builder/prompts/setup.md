@@ -46,13 +46,22 @@ mkdir -p src tests
 # Create pyproject.toml with click/typer, pytest
 ```
 
-**api_backend:**
+**api_backend (FastAPI):**
 ```bash
 mkdir -p src tests
 # Create pyproject.toml with fastapi, uvicorn, pydantic, pytest, httpx
 ```
 
-Always use **pnpm** for JS/TS projects.
+**api_backend (Laravel):**
+```bash
+composer create-project laravel/laravel .
+php artisan key:generate
+# Configure .env for database (MySQL or PostgreSQL)
+# Install additional packages: composer require laravel/sanctum
+# Install testing: composer require pestphp/pest --dev
+```
+
+Always use **pnpm** for JS/TS projects, **composer** for PHP/Laravel.
 
 ---
 
