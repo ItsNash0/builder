@@ -78,5 +78,16 @@ class CostUpdate(Event):
 
 
 @dataclass
+class SpecApprovalRequested(Event):
+    spec_path: str = ""
+
+
+@dataclass
+class BudgetExceeded(Event):
+    current_cost: float = 0.0
+    max_cost: float = 0.0
+
+
+@dataclass
 class ShutdownRequested(Event):
     pass

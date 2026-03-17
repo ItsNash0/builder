@@ -77,6 +77,13 @@ MAX_SPAWN_RETRIES = 5
 BASE_RETRY_DELAY = 2.0   # seconds
 MAX_RETRY_DELAY = 120.0  # seconds
 
+# Fallback model chain
+MODEL_FALLBACK_CHAIN = [
+    None,                    # Default model
+    "claude-sonnet-4-6",    # Fallback
+]
+FALLBACK_AFTER_FAILURES = 3
+
 
 def _is_rate_limit_error(error: Exception) -> bool:
     """Check if an error is a rate limit / transient error worth retrying."""
@@ -92,30 +99,38 @@ class AgentManager:
     def __init__(self, event_queue: asyncio.Queue):
         self.event_queue = event_queue
         self.total_cost_usd: float = 0.0
+        self._consecutive_failures = 0
 
     async def _emit(self, event) -> None:
         await self.event_queue.put(event)
 
+    def _get_model(self) -> str | None:
+        """Get current model, falling back after consecutive failures."""
+        if self._consecutive_failures >= FALLBACK_AFTER_FAILURES:
+            return MODEL_FALLBACK_CHAIN[-1]  # Use fallback model
+        return MODEL_FALLBACK_CHAIN[0]  # Use default model
+
     async def spawn_agent(
         self, config: AgentConfig, prompt: str = "", phase_name: str = ""
     ) -> AgentResult:
-        """Spawn a single Claude Code subagent with automatic retry on rate limits.
-
-        Args:
-            config: Agent configuration (system_prompt used as system prompt)
-            prompt: The user-facing prompt/task (what to do). If empty, uses system_prompt.
-            phase_name: Name of the phase (for tool scoping and max_turns).
-        """
         for attempt in range(1, MAX_SPAWN_RETRIES + 1):
-            result = await self._spawn_agent_once(config, prompt, phase_name)
+            model = self._get_model()
+            if model and self._consecutive_failures >= FALLBACK_AFTER_FAILURES:
+                await self._emit(LogMessage(
+                    message=f"Switching to fallback model ({model}) after {self._consecutive_failures} failures",
+                    level="warning",
+                ))
+
+            result = await self._spawn_agent_once(config, prompt, phase_name, model=model)
 
             if result.success:
+                self._consecutive_failures = 0
                 return result
 
-            # Check if it's a retryable error
+            self._consecutive_failures += 1
+
             if result.error and _is_rate_limit_error(Exception(result.error)):
                 if attempt < MAX_SPAWN_RETRIES:
-                    # Exponential backoff with jitter
                     delay = min(BASE_RETRY_DELAY * (2 ** (attempt - 1)), MAX_RETRY_DELAY)
                     jitter = random.uniform(0, delay * 0.5)
                     wait_time = delay + jitter
@@ -129,15 +144,14 @@ class AgentManager:
                     await asyncio.sleep(wait_time)
                     continue
 
-            # Non-retryable error, return immediately
             return result
 
-        return result  # Return last result after all retries exhausted
+        return result
 
     async def _spawn_agent_once(
-        self, config: AgentConfig, prompt: str = "", phase_name: str = ""
+        self, config: AgentConfig, prompt: str = "", phase_name: str = "",
+        model: str | None = None,
     ) -> AgentResult:
-        """Single attempt to spawn a Claude Code subagent."""
         agent_id = str(uuid.uuid4())[:8]
 
         await self._emit(AgentSpawned(
@@ -151,7 +165,6 @@ class AgentManager:
         token_usage = 0
         cost_usd = 0.0
 
-        # Phase-dependent max_turns
         max_turns = PHASE_MAX_TURNS.get(phase_name, 50)
 
         options = ClaudeCodeOptions(
@@ -159,6 +172,7 @@ class AgentManager:
             cwd=Path(config.working_directory),
             permission_mode="bypassPermissions",
             max_turns=max_turns,
+            **({"model": model} if model else {}),
         )
 
         try:

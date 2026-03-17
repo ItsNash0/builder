@@ -43,6 +43,9 @@ class BuilderConfig(BaseModel):
     project_type: ProjectType
     rounds: int = Field(default=3, ge=1, le=10)
     existing_project: bool = False
+    approve_spec: bool = False
+    max_cost_usd: float | None = None
+    webhook_url: str | None = None
 
 
 class RoundState(BaseModel):

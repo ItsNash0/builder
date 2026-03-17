@@ -81,13 +81,28 @@ class ProjectContext:
         filename = pattern.format(round=round_number)
         return self.builder_dir / subdir / filename
 
+    # Context priority: which prior phases matter most to each current phase
+    CONTEXT_PRIORITY = {
+        "brainstorm": [],
+        "research": ["brainstorm"],
+        "build": ["brainstorm", "research"],
+        "verify": ["brainstorm"],
+        "test": ["brainstorm", "verify"],
+        "improve": ["brainstorm", "verify", "test"],
+    }
+
     def get_context_files(self, round_number: int, phase_name: str) -> list[str]:
         files = []
         config_path = self.builder_dir / "config.json"
         if config_path.exists():
             files.append(str(config_path))
-        phase_index = PHASE_NAMES.index(phase_name)
-        for prior_phase in PHASE_NAMES[:phase_index]:
+        # Include project CLAUDE.md for verify/test/improve
+        claude_md = self.project_dir / "CLAUDE.md"
+        if claude_md.exists() and phase_name in ("verify", "test", "improve"):
+            files.append(str(claude_md))
+        # Priority-based context: only include what's relevant
+        priority_phases = self.CONTEXT_PRIORITY.get(phase_name, [])
+        for prior_phase in priority_phases:
             output_path = self.get_phase_output_path(round_number, prior_phase)
             if output_path.exists() and output_path.is_file():
                 files.append(str(output_path))

@@ -3,20 +3,26 @@ from pathlib import Path
 
 from builder.agents import AgentManager
 from builder.context import ProjectContext
+from builder.error_memory import ErrorMemory
 from builder.models import AgentConfig, AgentResult, BuilderConfig
+from builder.repomap import generate_repo_map
 
 
 MAX_CONTEXT_CHARS = 50000  # Cap context per file to prevent prompt explosion
+
+# Phases that benefit from a repo map (codebase awareness without full files)
+REPO_MAP_PHASES = {"verify", "test", "improve"}
 
 
 class BasePhase(abc.ABC):
     name: str = ""
     default_timeout: int = 600
 
-    def __init__(self, context: ProjectContext, agent_manager: AgentManager, config: BuilderConfig):
+    def __init__(self, context: ProjectContext, agent_manager: AgentManager, config: BuilderConfig, error_memory: ErrorMemory | None = None):
         self.context = context
         self.agent_manager = agent_manager
         self.config = config
+        self.error_memory = error_memory
 
     @abc.abstractmethod
     async def run(self, round_number: int) -> AgentResult:
@@ -40,6 +46,11 @@ class BasePhase(abc.ABC):
             total_rounds=self.config.rounds,
             user_prompt=self.config.prompt,
         )
+        # Inject error memory so agents learn from past failures
+        if self.error_memory:
+            error_context = self.error_memory.get_context_prompt()
+            if error_context:
+                prompt += f"\n\n{error_context}"
         if self.config.existing_project:
             prompt += (
                 "\n\n## EXISTING PROJECT MODE"
@@ -58,6 +69,14 @@ class BasePhase(abc.ABC):
             parts = [f"Work on the existing project: {self.config.prompt}"]
         else:
             parts = [f"Build the following: {self.config.prompt}"]
+        # Include repo map for phases that need codebase awareness
+        if self.name in REPO_MAP_PHASES:
+            try:
+                repo_map = generate_repo_map(self.context.project_dir)
+                if repo_map.strip():
+                    parts.append(f"\n--- Repository Map ---\n{repo_map}")
+            except Exception:
+                pass  # Don't fail if repo map generation fails
         context_files = self.context.get_context_files(round_number, self.name)
         for filepath in context_files:
             path = Path(filepath)

@@ -70,7 +70,17 @@ Build the complete project in the current working directory:
    # or: node -e "const lib = require('.'); console.log('OK')"
    ```
 
-8. **If anything fails, fix the code and retry until it works.** Do not move on with broken code.
+8. **Build-Test Loop (CRITICAL):** After writing all code, you MUST iterate until everything works:
+   ```
+   loop:
+     1. Install deps
+     2. Run build/compile → fix any errors
+     3. Start the app → fix any startup errors
+     4. Run existing tests (if any) → fix any failures
+     5. If anything failed, go back to step 1
+     6. Only when ALL pass, move on
+   ```
+   Do NOT move on with broken code. This inner loop is the most important part of the build phase.
 
 ### README.md (REQUIRED)
 
