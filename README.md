@@ -71,7 +71,8 @@ At the end, you have a **complete, tested, documented project** with a README, s
 - **Live TUI dashboard** — watch agents work in real-time with phase tracking, cost, and logs
 - **Existing project support** — run on an existing codebase to fix bugs, add features, or improve quality
 - **Latest versions** — agents verify latest library versions before coding (no stale dependencies)
-- **Git integration** — automatic commit after each round for easy rollback
+- **CLAUDE.md generation** — creates project conventions file for future AI agent sessions
+- **Git integration** — automatic commit after each phase for granular rollback
 - **Resume support** — interrupted builds can be resumed from where they left off
 - **Cost tracking** — real-time USD cost display in the dashboard
 
@@ -80,7 +81,7 @@ At the end, you have a **complete, tested, documented project** with a README, s
 | Type | Stack | Testing |
 |------|-------|---------|
 | **Web App** | Next.js + TypeScript | Playwright E2E + Vitest |
-| **Mobile App** | React Native + Expo + Supabase | Playwright (web mode) + Jest |
+| **Mobile App** | React Native + Expo + SpacetimeDB + Clerk | Playwright (web mode) + Jest |
 | **API / Backend** | FastAPI or Express + TypeScript | pytest/Vitest + httpx |
 | **CLI Tool** | Python + Click/Typer | pytest |
 | **Library** | Python or TypeScript | pytest/Vitest |
@@ -95,13 +96,19 @@ Stacks are chosen for **testability** — every project can be built, run, and v
 - **Claude Code CLI** — [install instructions](https://docs.anthropic.com/en/docs/claude-code)
 - **Node.js 18+** (for web/mobile projects)
 
-### Install
+### Install with pipx (recommended)
+
+```bash
+pipx install git+https://github.com/ItsNash0/builder.git
+```
+
+This installs `builder` as an isolated CLI tool. [Install pipx](https://pipx.pypa.io/stable/installation/) if you don't have it.
+
+### Install with pip
 
 ```bash
 pip install git+https://github.com/ItsNash0/builder.git
 ```
-
-That's it. This installs the `builder` command globally.
 
 ### Install from source (for development)
 
@@ -192,8 +199,9 @@ builder/
     │               │
     ▼               ▼
   Build ──→ Verify ──→ Test ──→ Improve
-    │                              │
-    └──── git commit ◄─────────────┘
+    │          │         │         │
+    └──────────┴─────────┴─────────┘
+              git commit per phase
 ```
 
 ## Development
