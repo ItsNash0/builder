@@ -77,7 +77,17 @@ MAX_SPAWN_RETRIES = 5
 BASE_RETRY_DELAY = 2.0   # seconds
 MAX_RETRY_DELAY = 120.0  # seconds
 
-# Fallback model chain
+# Per-phase model routing — offload heavy coding/testing to Sonnet
+PHASE_MODEL = {
+    "brainstorm": None,              # Default (Opus) — creative planning
+    "research": None,                # Default (Opus) — analysis
+    "build": "claude-sonnet-4-6",    # Sonnet — fast, great at coding
+    "verify": None,                  # Default (Opus) — judgment calls
+    "test": "claude-sonnet-4-6",     # Sonnet — fast, great at testing
+    "improve": None,                 # Default (Opus) — architectural decisions
+}
+
+# Fallback model chain (when primary keeps failing)
 MODEL_FALLBACK_CHAIN = [
     None,                    # Default model
     "claude-sonnet-4-6",    # Fallback
@@ -104,17 +114,21 @@ class AgentManager:
     async def _emit(self, event) -> None:
         await self.event_queue.put(event)
 
-    def _get_model(self) -> str | None:
-        """Get current model, falling back after consecutive failures."""
+    def _get_model(self, phase_name: str = "") -> str | None:
+        """Get model for a phase. Uses phase routing first, then fallback chain on repeated failures."""
+        # On repeated failures, force fallback regardless of phase preference
         if self._consecutive_failures >= FALLBACK_AFTER_FAILURES:
-            return MODEL_FALLBACK_CHAIN[-1]  # Use fallback model
-        return MODEL_FALLBACK_CHAIN[0]  # Use default model
+            return MODEL_FALLBACK_CHAIN[-1]
+        # Use per-phase model routing
+        if phase_name and phase_name in PHASE_MODEL:
+            return PHASE_MODEL[phase_name]
+        return MODEL_FALLBACK_CHAIN[0]
 
     async def spawn_agent(
         self, config: AgentConfig, prompt: str = "", phase_name: str = ""
     ) -> AgentResult:
         for attempt in range(1, MAX_SPAWN_RETRIES + 1):
-            model = self._get_model()
+            model = self._get_model(phase_name)
             if model and self._consecutive_failures >= FALLBACK_AFTER_FAILURES:
                 await self._emit(LogMessage(
                     message=f"Switching to fallback model ({model}) after {self._consecutive_failures} failures",
