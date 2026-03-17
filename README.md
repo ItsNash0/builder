@@ -38,17 +38,19 @@ $ builder
 ? Start building? Yes
 ```
 
-Builder then runs **autonomous iteration rounds**, each with 6 phases:
+Builder then runs **autonomous iteration rounds**, each with 8 phases:
 
 ```
 Round 1/3 ─────────────────────────────────────────────────
 
-  ✓ Brainstorm    Product spec, features, architecture
-  ✓ Research      Latest libraries, versions, patterns
-  ✓ Build         Write all code, install deps, verify it runs
-  ✓ Verify        Code review, security audit, run the app
-  ✓ Test          Playwright E2E tests, unit tests, smoke tests
-  ✓ Improve       Prioritized improvements for next round
+  ✓ Brainstorm    Product spec, features, architecture       (Opus)
+  ✓ Research      Latest libraries, versions, patterns       (Opus × 3)
+  ✓ Design        Design tokens, colors, typography, styles  (Opus)
+  ✓ Setup         Scaffold, deps, Supabase config, CLAUDE.md (Sonnet)
+  ✓ Build         Write all application code                 (Sonnet)
+  ✓ Test          Playwright E2E + unit tests, fix failures  (Sonnet)
+  ✓ Verify        User/Security/Quality multi-persona review (Opus × 3)
+  ✓ Improve       Fix all issues, re-run tests               (Opus)
 
   → git commit: "builder: round 1 complete"
 
@@ -64,8 +66,10 @@ At the end, you have a **complete, tested, documented project** with a README, s
 ## Features
 
 - **Fully autonomous** — describe your project, pick iteration rounds, walk away
-- **6-phase pipeline** — brainstorm → research → build → verify → test → improve
+- **8-phase pipeline** — brainstorm → research → design → setup → build → test → verify → improve
+- **Design system** — custom colors, typography, and component styles so UIs don't look AI-generated
 - **Real testing** — Playwright browser testing, not just unit tests. Agents click buttons, fill forms, and interact with your app like a human
+- **Supabase MCP integration** — agents can create tables, apply migrations, and test against your real Supabase project
 - **Self-healing** — failed phases retry up to 3 times with exponential backoff
 - **Rate limit resilient** — automatic retry with jitter on API rate limits
 - **Live TUI dashboard** — watch agents work in real-time with phase tracking, cost, and logs
@@ -80,13 +84,14 @@ At the end, you have a **complete, tested, documented project** with a README, s
 
 | Type | Stack | Testing |
 |------|-------|---------|
-| **Web App** | Next.js + TypeScript | Playwright E2E + Vitest |
-| **Mobile App** | React Native + Expo + Supabase | Playwright (web mode) + Jest |
-| **API / Backend** | FastAPI or Express + TypeScript | pytest/Vitest + httpx |
+| **Web App** | Next.js + Tailwind + shadcn/ui (pnpm) | Playwright E2E + Vitest |
+| **Landing Page** | Astro + Tailwind CSS (pnpm) | Playwright E2E |
+| **Mobile App** | Expo + React Native + Tamagui + Supabase | Playwright (web mode) + Jest |
+| **API / Backend** | FastAPI + Supabase or Laravel | pytest + httpx / PHPUnit |
 | **CLI Tool** | Python + Click/Typer | pytest |
 | **Library** | Python or TypeScript | pytest/Vitest |
 
-Stacks are chosen for **testability** — every project can be built, run, and verified entirely from the command line without emulators or manual browser interaction.
+Stacks are opinionated for **speed and quality**. Every project uses pnpm, Supabase for backend (or Laravel for complex APIs), and can be tested from the CLI.
 
 ## Installation
 
@@ -117,6 +122,16 @@ git clone https://github.com/ItsNash0/builder.git
 cd builder
 pip install -e ".[dev]"
 ```
+
+### Supabase MCP (recommended for web/mobile/API projects)
+
+If your project uses Supabase (most web and mobile apps do), set up the Supabase MCP server so builder agents can **directly create tables, apply migrations, and configure auth** on your real Supabase project:
+
+1. Install the Supabase MCP server: [supabase-community/supabase-mcp](https://github.com/supabase-community/supabase-mcp)
+2. Add it to your Claude Code MCP config (`~/.claude/settings.json`)
+3. Builder agents will automatically detect and use it
+
+Without Supabase MCP, agents will create schema SQL files and placeholder env vars, but won't be able to set up the actual database or test real API calls.
 
 ### Verify
 

@@ -59,6 +59,11 @@ Use the Supabase client that was set up in the setup phase:
 - Storage: file upload/download where needed
 - RLS: all queries should work within RLS policies (no service role key in client code)
 
+**If Supabase MCP tools are available**, you can:
+- Use `execute_sql` to verify your queries work against the real database
+- Use `list_tables` to check the schema is correct
+- Use `apply_migration` if you need to add columns or tables not covered in setup
+
 ### 5. Build-Test Loop (CRITICAL)
 
 After writing all code, you MUST iterate until everything works:

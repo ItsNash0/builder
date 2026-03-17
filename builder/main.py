@@ -110,7 +110,17 @@ def run_wizard(existing_code: bool = False) -> BuilderConfig:
     print(f"  Prompt:   {prompt_text[:80]}{'...' if len(prompt_text) > 80 else ''}")
     print(f"  Type:     {project_type.value}")
     print(f"  Rounds:   {rounds}")
-    print(f"  Note:     Multiple rounds will consume significant tokens.\n")
+    print(f"  Note:     Multiple rounds will consume significant tokens.")
+
+    # Supabase MCP reminder for projects that likely need it
+    needs_supabase = project_type in (ProjectType.WEB_APP, ProjectType.MOBILE_APP, ProjectType.API_BACKEND)
+    if needs_supabase:
+        print(f"\n  Supabase: This project type may use Supabase for backend/auth/database.")
+        print(f"            For best results, configure the Supabase MCP server in Claude Code:")
+        print(f"            https://github.com/supabase-community/supabase-mcp")
+        print(f"            This lets builder agents create tables, set up auth, and test")
+        print(f"            against your real Supabase project automatically.")
+    print()
 
     confirm = inquirer.confirm(message="Start building?", default=True).execute()
 

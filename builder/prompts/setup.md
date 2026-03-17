@@ -81,28 +81,36 @@ Install everything from the spec and research recommendations. This includes:
 
 If the project uses Supabase:
 
-1. **Create Supabase config files:**
-   - `lib/supabase.ts` (or `utils/supabase.ts`) with client setup
-   - `.env.local` with placeholder values:
-     ```
-     NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
-     NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
-     ```
-   - For Expo: `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+**IMPORTANT: You may have access to Supabase MCP tools. Check if these tools are available:**
+- `mcp__supabase__list_projects` — list existing Supabase projects
+- `mcp__supabase__list_tables` — see existing tables
+- `mcp__supabase__execute_sql` — run SQL directly on the database
+- `mcp__supabase__apply_migration` — apply schema migrations
+- `mcp__supabase__get_project_url` — get the project URL
+- `mcp__supabase__get_publishable_keys` — get the anon key
 
-2. **Create database schema file:**
-   - `supabase/schema.sql` with all tables, RLS policies, and indexes
-   - Include `CREATE TABLE`, `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`, and `CREATE POLICY` statements
-   - Add comments explaining each table's purpose
+**If Supabase MCP tools ARE available:**
+1. Use `list_projects` to find the user's Supabase project (or create one if needed)
+2. Use `apply_migration` to create all tables, RLS policies, and indexes directly
+3. Use `get_project_url` and `get_publishable_keys` to get real credentials
+4. Write the real URL and anon key to `.env.local` (these are publishable/safe for client-side)
+5. Use `generate_typescript_types` to generate accurate TypeScript types from the actual schema
 
-3. **Create Supabase provider/wrapper:**
-   - Auth context/provider that wraps the app
-   - Session management (auto-refresh, persistence)
-   - For Expo: use `expo-secure-store` for token persistence
+**If Supabase MCP tools are NOT available:**
+1. Create a `supabase/schema.sql` file with all tables, RLS policies, and indexes
+2. Write `.env.local` with placeholder values:
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+   ```
+   For Expo: `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+3. Create `types/database.ts` manually matching the schema
 
-4. **Create type definitions:**
-   - `types/database.ts` with TypeScript types matching the schema
-   - Export table row types, insert types, update types
+**Always create these regardless of MCP availability:**
+1. **Supabase client config:** `lib/supabase.ts` (or `utils/supabase.ts`) with `createClient(url, anonKey)`
+2. **Auth provider/wrapper:** context that wraps the app with session management
+3. **For Expo:** use `expo-secure-store` for token persistence
+4. **Schema SQL file:** `supabase/schema.sql` — even with MCP, keep this as documentation
 
 ---
 
