@@ -13,6 +13,86 @@ MAX_CONTEXT_CHARS = 50000  # Cap context per file to prevent prompt explosion
 # Phases that benefit from a repo map (codebase awareness without full files)
 REPO_MAP_PHASES = {"build", "test", "verify", "improve"}
 
+# Per-phase instructions for existing project mode
+EXISTING_PROJECT_INSTRUCTIONS = {
+    "brainstorm": (
+        "\n\n## EXISTING PROJECT MODE — AUDIT"
+        "\n\nThis is an EXISTING project. Your job is to AUDIT it, not design from scratch."
+        "\n\n**Step 1: Deep exploration (DO THIS FIRST)**"
+        "\n1. Read package.json / pyproject.toml / Cargo.toml for deps and scripts"
+        "\n2. Read README.md, CLAUDE.md if they exist"
+        "\n3. Read main entry points (app/, src/, index.*, main.*)"
+        "\n4. Read config files (tsconfig, tailwind, next.config, .env.example)"
+        "\n5. List all directories and key files"
+        "\n\n**Step 2: Try to run it**"
+        "\n1. Install deps (npm install / pip install)"
+        "\n2. Try to build/compile"
+        "\n3. Try to start the app"
+        "\n4. Document what works and what breaks"
+        "\n\n**Step 3: Produce an audit spec**"
+        "\n- Current state: what works, what's broken, what errors occur"
+        "\n- Tech stack: exact frameworks, versions, patterns in use (DO NOT change the stack)"
+        "\n- Missing/broken features vs. what the user requested"
+        "\n- Prioritized list of fixes needed"
+        "\n- File structure as it currently exists"
+        "\n- Keep the existing stack — do NOT suggest switching frameworks"
+    ),
+    "research": (
+        "\n\n## EXISTING PROJECT MODE"
+        "\n\nThis project already exists. Research should focus on:"
+        "\n1. Latest versions of the EXISTING dependencies (check what's in package.json/pyproject.toml)"
+        "\n2. Migration guides if deps are outdated"
+        "\n3. Best practices for the EXISTING stack (don't suggest new stacks)"
+        "\n4. Solutions for specific issues identified in the brainstorm/audit"
+    ),
+    "build": (
+        "\n\n## EXISTING PROJECT MODE — FIX & EXTEND"
+        "\n\nThis is an EXISTING project. You MUST:"
+        "\n1. **Read the codebase first** — understand the architecture before changing anything"
+        "\n2. **Fix broken things first** — if the app doesn't start, fix that before adding features"
+        "\n3. **Follow existing patterns** — match the code style, naming, and architecture"
+        "\n4. **Don't rewrite from scratch** — modify existing files, don't replace them"
+        "\n5. **Don't change the tech stack** — use what's already there"
+        "\n6. **Test after every change** — build, start, verify it still works"
+        "\n7. **Update README.md** if you change how to install/run/test"
+    ),
+    "test": (
+        "\n\n## EXISTING PROJECT MODE"
+        "\n\nThis is an EXISTING project. When testing:"
+        "\n1. Check for existing tests first — run them, see what passes/fails"
+        "\n2. Fix failing existing tests before writing new ones"
+        "\n3. Write tests that cover the user's requested changes"
+        "\n4. Don't break existing test infrastructure (test config, helpers, fixtures)"
+    ),
+    "verify": (
+        "\n\n## EXISTING PROJECT MODE"
+        "\n\nThis is an EXISTING project. Focus verification on:"
+        "\n1. Does the app start and run after the builder's changes?"
+        "\n2. Did the builder break any existing functionality?"
+        "\n3. Were the user's requested changes actually implemented?"
+        "\n4. Is the README still accurate?"
+    ),
+    "improve": (
+        "\n\n## EXISTING PROJECT MODE"
+        "\n\nThis is an EXISTING project. When improving:"
+        "\n1. Focus on fixing what the builder changed/broke, not rewriting unrelated code"
+        "\n2. Ensure existing functionality still works"
+        "\n3. Only refactor code that was touched in this round"
+        "\n4. Update README and CLAUDE.md if anything changed"
+    ),
+}
+
+DEFAULT_EXISTING_INSTRUCTIONS = (
+    "\n\n## EXISTING PROJECT MODE"
+    "\n\nThis is an EXISTING project with code already in the working directory. "
+    "You MUST:"
+    "\n1. First explore and understand the existing codebase (read files, check structure)"
+    "\n2. Identify the tech stack, frameworks, and patterns already in use"
+    "\n3. Work WITH the existing code — do not rewrite from scratch"
+    "\n4. Preserve existing functionality while making improvements"
+    "\n5. If the existing code doesn't work, fix it before adding anything new"
+)
+
 
 class BasePhase(abc.ABC):
     name: str = ""
@@ -52,25 +132,22 @@ class BasePhase(abc.ABC):
             if error_context:
                 prompt += f"\n\n{error_context}"
         if self.config.existing_project:
-            prompt += (
-                "\n\n## EXISTING PROJECT MODE"
-                "\n\nThis is an EXISTING project with code already in the working directory. "
-                "You MUST:"
-                "\n1. First explore and understand the existing codebase (read files, check structure)"
-                "\n2. Identify the tech stack, frameworks, and patterns already in use"
-                "\n3. Work WITH the existing code — do not rewrite from scratch"
-                "\n4. Preserve existing functionality while making improvements"
-                "\n5. If the existing code doesn't work, fix it before adding anything new"
-            )
+            prompt += EXISTING_PROJECT_INSTRUCTIONS.get(self.name, DEFAULT_EXISTING_INSTRUCTIONS)
         return prompt
+
+    def _should_include_repo_map(self) -> bool:
+        """In existing project mode, ALL phases get the repo map for codebase awareness."""
+        if self.config.existing_project:
+            return True
+        return self.name in REPO_MAP_PHASES
 
     def _build_task_prompt(self, round_number: int) -> str:
         if self.config.existing_project:
             parts = [f"Work on the existing project: {self.config.prompt}"]
         else:
             parts = [f"Build the following: {self.config.prompt}"]
-        # Include repo map for phases that need codebase awareness
-        if self.name in REPO_MAP_PHASES:
+        # Include repo map for codebase awareness
+        if self._should_include_repo_map():
             try:
                 repo_map = generate_repo_map(self.context.project_dir)
                 if repo_map.strip():

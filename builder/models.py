@@ -22,6 +22,10 @@ class PhaseStatus(StrEnum):
 
 PHASE_NAMES = ["brainstorm", "research", "design", "setup", "build", "test", "verify", "improve"]
 
+# Existing projects skip design (already has UI) and setup (already scaffolded).
+# Brainstorm becomes an audit, build focuses on fixes/additions.
+EXISTING_PHASE_NAMES = ["brainstorm", "research", "build", "test", "verify", "improve"]
+
 
 class AgentConfig(BaseModel):
     system_prompt: str

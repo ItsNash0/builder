@@ -22,6 +22,7 @@ from builder.models import (
     PhaseStatus,
     StateData,
     PHASE_NAMES,
+    EXISTING_PHASE_NAMES,
 )
 from builder.phases import PHASE_CLASSES
 from builder.phases.base import BasePhase
@@ -221,13 +222,18 @@ class Orchestrator:
         await self._emit(PhaseCompleted(round_number=round_number, phase_name=phase.name, success=False))
         return False
 
+    def _get_phase_list(self) -> list[str]:
+        """Return the correct phase list based on project mode."""
+        return EXISTING_PHASE_NAMES if self.config.existing_project else PHASE_NAMES
+
     def _get_remaining_phases(self, state: StateData, round_number: int) -> list[str]:
+        phase_list = self._get_phase_list()
         round_key = str(round_number)
         if round_key not in state.rounds:
-            return list(PHASE_NAMES)
+            return list(phase_list)
         round_state = state.rounds[round_key]
         remaining = []
-        for phase in PHASE_NAMES:
+        for phase in phase_list:
             status = round_state.phases.get(phase, PhaseStatus.PENDING)
             if status in (PhaseStatus.PENDING, PhaseStatus.IN_PROGRESS, PhaseStatus.FAILED_SKIPPED):
                 remaining.append(phase)
