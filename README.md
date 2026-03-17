@@ -95,27 +95,40 @@ Stacks are opinionated for **speed and quality**. Every project uses pnpm, Supab
 
 ## Installation
 
-### Prerequisites
+### Prerequisites (required)
 
-- **Python 3.11+**
-- **Claude Code CLI** — [install instructions](https://docs.anthropic.com/en/docs/claude-code)
-- **Node.js 18+** (for web/mobile projects)
+| Requirement | Why | Install |
+|-------------|-----|---------|
+| **Python 3.11+** | Builder itself is Python | [python.org](https://python.org) |
+| **Claude Code CLI** | Builder spawns Claude Code subagents | [docs.anthropic.com](https://docs.anthropic.com/en/docs/claude-code) |
+| **Node.js 18+** | For web/mobile/API projects | [nodejs.org](https://nodejs.org) |
+| **pnpm** | Package manager for all JS/TS projects | `npm install -g pnpm` |
+| **Lightpanda** | Headless browser for E2E testing (replaces Chromium) | [lightpanda.io](https://github.com/lightpanda-io/browser) |
 
-### Install with pipx (recommended)
+### Optional (recommended)
+
+| Requirement | Why | Install |
+|-------------|-----|---------|
+| **Supabase MCP** | Lets agents create tables, apply migrations, and test against your real Supabase project | [supabase-community/supabase-mcp](https://github.com/supabase-community/supabase-mcp) |
+| **PHP 8.2+ & Composer** | Only if building Laravel backend projects | [php.net](https://php.net), [getcomposer.org](https://getcomposer.org) |
+
+### Install Builder
+
+**With pipx (recommended):**
 
 ```bash
 pipx install git+https://github.com/ItsNash0/builder.git
 ```
 
-This installs `builder` as an isolated CLI tool. [Install pipx](https://pipx.pypa.io/stable/installation/) if you don't have it.
+[Install pipx](https://pipx.pypa.io/stable/installation/) if you don't have it.
 
-### Install with pip
+**With pip:**
 
 ```bash
 pip install git+https://github.com/ItsNash0/builder.git
 ```
 
-### Install from source (for development)
+**From source (for development):**
 
 ```bash
 git clone https://github.com/ItsNash0/builder.git
@@ -123,15 +136,15 @@ cd builder
 pip install -e ".[dev]"
 ```
 
-### Supabase MCP (recommended for web/mobile/API projects)
+### Setup Supabase MCP
 
-If your project uses Supabase (most web and mobile apps do), set up the Supabase MCP server so builder agents can **directly create tables, apply migrations, and configure auth** on your real Supabase project:
+Most web and mobile apps use Supabase for backend. Without the MCP, agents create schema SQL files and placeholder env vars but can't set up the actual database.
 
-1. Install the Supabase MCP server: [supabase-community/supabase-mcp](https://github.com/supabase-community/supabase-mcp)
-2. Add it to your Claude Code MCP config (`~/.claude/settings.json`)
-3. Builder agents will automatically detect and use it
+With the MCP, agents **directly create tables, apply migrations, get real credentials, and test API calls**:
 
-Without Supabase MCP, agents will create schema SQL files and placeholder env vars, but won't be able to set up the actual database or test real API calls.
+1. Install: [supabase-community/supabase-mcp](https://github.com/supabase-community/supabase-mcp)
+2. Add to Claude Code MCP config (`~/.claude/settings.json`)
+3. Builder agents automatically detect and use it
 
 ### Verify
 
@@ -176,21 +189,25 @@ builder
 ```
 builder/
 ├── main.py            # CLI wizard + dashboard launcher
-├── orchestrator.py    # Round loop, phase dispatch, retry logic
-├── agents.py          # Claude Code SDK wrapper, rate limit retry
-├── context.py         # .builder/ state management, resume support
+├── orchestrator.py    # Round loop, phase dispatch, retry, rollback
+├── agents.py          # Claude Code SDK wrapper, model routing, rate limit retry
+├── context.py         # .builder/ state management, context priority, resume
 ├── models.py          # Pydantic models for config, state, results
 ├── events.py          # Event system for dashboard updates
+├── error_memory.py    # Error pattern cache — agents learn from past failures
+├── repomap.py         # Lightweight AST-based codebase map for agent context
 ├── dashboard/
 │   └── app.py         # Textual TUI with phase tracker + live log
 ├── phases/
-│   ├── base.py        # Abstract base phase with prompt loading
-│   ├── brainstorm.py  # Product spec generation
+│   ├── base.py        # Abstract base with prompt loading, repo map, error memory
+│   ├── brainstorm.py  # Product spec (or audit for existing projects)
 │   ├── research.py    # 3 parallel research agents
-│   ├── build.py       # Code generation + verification
-│   ├── verify.py      # Code review + runtime verification
-│   ├── test.py        # E2E + unit testing with Playwright
-│   └── improve.py     # Improvement suggestions (applied on final round)
+│   ├── design.py      # Design tokens, colors, typography, component styles
+│   ├── setup.py       # Scaffold, deps, Supabase config, CLAUDE.md
+│   ├── build.py       # Application code only (UI, logic, routing)
+│   ├── test.py        # E2E (Playwright + Lightpanda) + unit tests
+│   ├── verify.py      # 3 parallel agents: user, security, quality review
+│   └── improve.py     # Fix all issues, re-test, delivery readiness
 └── prompts/
     └── *.md           # Phase-specific prompt templates
 ```
@@ -198,25 +215,13 @@ builder/
 ### Pipeline Flow
 
 ```
-                    ┌─────────────────────────────────┐
-                    │         Orchestrator             │
-                    │   (manages rounds & retries)     │
-                    └─────────────┬───────────────────┘
-                                  │
-              ┌───────────────────┼───────────────────┐
-              │                   │                   │
-         Round 1             Round 2             Round N
-              │                   │                   │
-    ┌─────────┴─────────┐        │                   │
-    │                   │        ...                 ...
-    ▼                   ▼
- Brainstorm ──→ Research (3 parallel agents)
-    │               │
-    ▼               ▼
-  Build ──→ Verify ──→ Test ──→ Improve
-    │          │         │         │
-    └──────────┴─────────┴─────────┘
-              git commit per phase
+New project:     brainstorm → research → design → setup → build → test → verify → improve
+                   (Opus)    (Opus ×3)  (Opus)  (Sonnet) (Sonnet) (Sonnet) (Opus ×3) (Opus)
+
+Existing project: brainstorm → research → build → test → verify → improve
+                   (audit)    (Opus ×3) (Sonnet) (Sonnet) (Opus ×3) (Opus)
+
+Each phase: git commit  │  Up to 3 retries  │  Rollback on test/improve failure
 ```
 
 ## Development
@@ -248,23 +253,32 @@ pytest tests/test_agents.py
 
 ## How Phases Work
 
-### Brainstorm
-Generates a detailed product spec: features, architecture, file structure, tech stack, and how-to-run instructions. For existing projects, analyzes the codebase first.
+### Brainstorm (Opus)
+Generates a detailed product spec: features, architecture, file structure, Supabase schema, and how-to-run instructions. For existing projects, performs a deep audit instead — explores the codebase, tries to run it, and documents what works and what's broken.
 
-### Research
-Spawns **3 parallel agents** focused on: library recommendations (with latest versions verified via `npm view`/`pip index`), design patterns, and common pitfalls.
+### Research (Opus, 3 parallel agents)
+Three agents research in parallel: library recommendations (with latest versions verified via `npm view`/`pip index`), design patterns and best practices, and common pitfalls and gotchas.
 
-### Build
-The main coding agent. Writes all code, installs dependencies, starts the app, and verifies it actually runs. Creates a comprehensive README. On round 2+, applies improvements from the previous round.
+### Design (Opus) — *new projects only*
+Creates a design system so the UI doesn't look AI-generated: custom color palette, typography choices, spacing tokens, component style guide, and framework-specific config (Tailwind/Tamagui). Produces `design-tokens.json`.
 
-### Verify
-Code review + runtime verification. Uses **Playwright** to open the app in a real browser, take screenshots, and check for JavaScript errors. Runs static analysis. Fixes critical/high issues directly.
+### Setup (Sonnet) — *new projects only*
+Scaffolds the project, installs all dependencies, configures Supabase (schema, auth, RLS policies via MCP if available), creates `CLAUDE.md`, and verifies the foundation compiles and starts. No app code — just infrastructure.
 
-### Test
-QA agent that tests like a human. Follows the README from scratch, runs the app, interacts with it via **Playwright** (clicks buttons, fills forms, navigates screens), writes E2E and unit tests, and fixes any broken code.
+### Build (Sonnet)
+Writes all application code: UI, business logic, routing, Supabase integration. Follows the design system from the design phase. Runs a build-test loop until the app compiles and starts successfully. Creates README.
 
-### Improve
-Analyzes verification and test results. Produces a prioritized improvement list. On the **final round**, applies all P0/P1 fixes directly and does a delivery readiness check.
+### Test (Sonnet)
+QA agent that tests like a human using **Playwright + Lightpanda**. Follows the README from scratch, interacts with the UI (clicks, forms, navigation), tests Supabase auth/CRUD/real-time flows, writes E2E and unit tests, and fixes broken code.
+
+### Verify (Opus, 3 parallel agents)
+Three personas review the project simultaneously after tests pass:
+- **User**: follows README, tests every feature end-to-end
+- **Security**: checks for injection, hardcoded secrets, bad auth, vulnerable deps
+- **Quality**: runs linters/type checking, verifies spec compliance, checks README accuracy
+
+### Improve (Opus)
+**Always fixes issues** — not just lists them. Applies all P0/P1/P2 fixes from verify and test, re-runs tests, and checks delivery readiness. On the final round, does a complete polish pass and ensures the project works out of the box.
 
 ## Configuration
 
@@ -272,18 +286,18 @@ Builder stores state in `.builder/` in your project directory:
 
 ```
 .builder/
-├── config.json        # Build configuration
-├── state.json         # Current progress (for resume)
-├── token_usage.json   # Cost breakdown per round/phase
-└── rounds/
-    ├── 1/
-    │   ├── brainstorm.md
-    │   ├── research.md
-    │   ├── verify.md
-    │   ├── test.md
-    │   └── improve.md
-    └── 2/
-        └── ...
+├── config.json          # Build configuration
+├── state.json           # Current progress (for resume)
+├── errors.json          # Error pattern memory (agents learn from failures)
+├── specs/               # Brainstorm output per round
+├── research/            # Research output per round
+├── design/              # Design system output per round
+├── setup/               # Setup report per round
+├── testing/             # Test results per round
+├── verification/        # Verification reports per round
+├── improvements/        # Improvement reports per round
+└── logs/
+    └── token-usage.json # Cost breakdown per round/phase
 ```
 
 ## License
