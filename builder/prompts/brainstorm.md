@@ -146,6 +146,40 @@ Describe the exact commands to run all tests (unit, integration, E2E).
 ### Implementation Notes
 Any important considerations, edge cases, or gotchas the builder should know about.
 
+### Feature Checklist
+
+**CRITICAL: You MUST generate a `feature_checklist.json` file in the project root.**
+
+This is the ground truth for what the project needs to do. Every feature gets an entry. Later phases (test, verify, improve) will update the `passes` field. The improve phase uses this to know exactly what's done and what isn't.
+
+Format — array of feature objects:
+```json
+[
+  {{
+    "id": "auth-signup",
+    "category": "auth",
+    "description": "User can sign up with email and password",
+    "steps": [
+      "Navigate to signup page",
+      "Fill in email and password fields",
+      "Submit the form",
+      "Verify redirect to dashboard",
+      "Verify user appears in database"
+    ],
+    "passes": false,
+    "priority": "P0"
+  }}
+]
+```
+
+Rules:
+- Every user-visible feature gets an entry
+- `steps` should be concrete, testable actions (not vague)
+- `priority`: P0 = core, P1 = important, P2 = nice-to-have
+- ALL features start with `"passes": false`
+- It is UNACCEPTABLE to remove or modify feature entries — only update `passes`
+- Use JSON format (not markdown) — this prevents casual rewriting
+
 ---
 
-Write your output as a well-structured markdown document.
+Write your output as a well-structured markdown document AND create the `feature_checklist.json` file.

@@ -167,13 +167,68 @@ Brief description of project structure.
 
 ---
 
-### Step 6: Verify Foundation
+### Step 6: Create init.sh
+
+**CRITICAL: Create a `.builder/init.sh` script** that reliably starts the development environment. Every future phase (build, test, verify, improve) will run this script to get the app running instead of figuring it out from scratch.
+
+```bash
+#!/bin/bash
+# .builder/init.sh — Start development environment
+set -e
+
+# Install dependencies
+pnpm install 2>/dev/null || pip install -e ".[dev]" 2>/dev/null || composer install 2>/dev/null
+
+# Start Lightpanda for E2E testing (if not already running)
+if ! curl -s http://127.0.0.1:9222/json/version > /dev/null 2>&1; then
+  lightpanda serve --host 127.0.0.1 --port 9222 &
+  sleep 2
+fi
+
+# Start the development server (background)
+# Replace with actual command for this project:
+pnpm dev &
+DEV_PID=$!
+
+# Wait for server to be ready
+echo "Waiting for dev server..."
+for i in $(seq 1 30); do
+  if curl -s http://localhost:3000 > /dev/null 2>&1; then
+    echo "Dev server ready at http://localhost:3000"
+    break
+  fi
+  sleep 1
+done
+
+echo "PID: $DEV_PID"
+```
+
+Customize the script for this specific project (correct port, correct start command, any env setup needed). Make it executable: `chmod +x .builder/init.sh`
+
+### Step 7: Create Progress File
+
+Create `.builder/progress.md`:
+
+```markdown
+# Build Progress
+
+## Setup Phase (Round {round_number})
+- Scaffolded: [framework] project
+- Dependencies: [count] packages installed
+- Supabase: [configured/not needed/placeholder]
+- Foundation: compiles and starts successfully
+- Status: COMPLETE
+```
+
+This file is appended to by every subsequent phase. Future agents read it first to orient themselves.
+
+### Step 8: Verify Foundation
 
 Run these checks and fix any issues:
 
 1. `pnpm install` — zero errors
 2. `pnpm build` or `npx tsc --noEmit` — compiles clean
-3. `pnpm dev` — starts without crashing (kill after confirming)
+3. `.builder/init.sh` — starts the dev environment successfully (kill after confirming)
 4. If Supabase: verify client initializes without errors (even without real keys, no crash)
 
 **Do NOT write any application UI code or business logic.** That's the build phase's job. You're setting up the foundation only.

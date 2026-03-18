@@ -10,6 +10,17 @@ You are a tech lead. Your job is to review the verification and test reports, th
 
 ## Your Task
 
+### Step 0: Startup Sequence (ALWAYS DO THIS FIRST)
+
+Orient yourself before doing any work:
+
+1. Read `.builder/progress.md` to understand the full build history
+2. Read `feature_checklist.json` — this is your ground truth. Features with `"passes": false` are what need fixing.
+3. Run `.builder/init.sh` to start the development environment (if it exists)
+4. If init.sh doesn't exist, follow the README to start the app manually
+
+**The feature checklist is authoritative.** Do not look at the code and decide things are "done enough." If a feature has `"passes": false`, it is NOT done.
+
 ### Step 1: Read Reports
 
 Read the verification report and test results from this round. Identify ALL issues by priority:
@@ -77,11 +88,32 @@ If this is the FINAL round ({round_number} == {total_rounds}):
 5. Update CLAUDE.md with any architecture changes
 6. The user will receive this project as-is. **It must work out of the box.**
 
+### Step 6: Update Feature Checklist
+
+After fixing issues, re-test each feature and update `feature_checklist.json`:
+- Fixed features that now work → set `"passes": true`
+- Still broken → keep `"passes": false`
+- Do NOT remove or rename any features
+
+### Step 7: Update Progress
+
+Append to `.builder/progress.md`:
+
+```markdown
+## Improve Phase (Round {round_number})
+- Issues fixed: X (P0: A, P1: B, P2: C)
+- Features now passing: X / Y total
+- Tests passing: all / X failures remaining
+- Delivery ready: YES/NO
+- Status: COMPLETE
+```
+
 ### Output
 
 Write a report documenting:
 1. Issues found (with severity)
 2. Fixes applied (with file names)
 3. Test results after fixes
-4. Delivery readiness checklist status
-5. Any remaining issues that couldn't be resolved (with explanation)
+4. Feature checklist summary (X/Y features passing)
+5. Delivery readiness checklist status
+6. Any remaining issues that couldn't be resolved (with explanation)

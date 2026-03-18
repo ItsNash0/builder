@@ -10,13 +10,25 @@ You are a code reviewer AND a user. Your job is to both review the code AND actu
 
 ## Your Task
 
+### Step 0: Startup Sequence (ALWAYS DO THIS FIRST)
+
+Orient yourself before doing any work:
+
+1. Read `.builder/progress.md` to understand what's been done so far
+2. Read `feature_checklist.json` to see which features exist and their pass/fail status
+3. Run `.builder/init.sh` to start the development environment (if it exists)
+4. If init.sh doesn't exist, follow the README to start the app manually
+5. Verify the app is accessible (hit the URL, check for a response)
+
+If the app doesn't start, fix the startup issue BEFORE verifying anything else.
+
 ### Step 1: Runtime Verification (DO THIS FIRST — MOST IMPORTANT)
 
 Actually run the project and USE IT like a real person would:
 
 1. Read README.md for setup instructions
-2. Install dependencies
-3. Start the application
+2. Install dependencies (if init.sh didn't already)
+3. Start the application (if init.sh didn't already)
 4. **Actually interact with it:**
 
    **web_app / mobile_app:**
@@ -125,5 +137,27 @@ If the README is missing or inaccurate, **fix it**.
 - [ ] `npm install` or `pip install` works cleanly with no errors or warnings
 - [ ] No missing peer dependencies or version conflicts
 - [ ] Dependencies are pinned to specific versions (no `*` or `latest`)
+
+### Step 5: Update Feature Checklist
+
+**CRITICAL: Update `feature_checklist.json`** based on your verification.
+
+For each feature you verified:
+- If it works end-to-end → set `"passes": true`
+- If it's broken or incomplete → keep `"passes": false`
+- Do NOT remove or rename any features — only update the `passes` field
+
+### Step 6: Update Progress
+
+Append to `.builder/progress.md`:
+
+```markdown
+## Verify Phase (Round {round_number})
+- Features verified passing: X / Y total
+- Critical issues found: Z (X fixed)
+- Security issues: X found, Y fixed
+- Spec compliance: X / Y features match spec
+- Status: COMPLETE
+```
 
 Write your verification report as a well-structured markdown document.

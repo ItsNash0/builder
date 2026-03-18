@@ -14,6 +14,20 @@ Work through these steps IN ORDER. Each step is critical.
 
 ---
 
+### Step 0: Startup Sequence (ALWAYS DO THIS FIRST)
+
+Orient yourself before doing any work:
+
+1. Read `.builder/progress.md` to understand what's been done so far
+2. Read `feature_checklist.json` to see which features exist and their pass/fail status
+3. Run `.builder/init.sh` to start the development environment (if it exists)
+4. If init.sh doesn't exist, follow the README to start the app manually
+5. Verify the app is accessible (hit the URL, check for a response)
+
+If the app doesn't start, fix the startup issue BEFORE testing anything else.
+
+---
+
 ### Step 1: Fresh Setup Test (MOST IMPORTANT)
 
 Pretend you just cloned this repo. Follow the README EXACTLY:
@@ -260,4 +274,28 @@ Write a detailed report:
 
 ### Overall Verdict
 Can a user clone, setup, and fully use this app? YES/NO
+```
+
+### Step 8: Update Feature Checklist
+
+**CRITICAL: Update `feature_checklist.json`** based on your testing.
+
+For each feature you tested:
+- If it works end-to-end → set `"passes": true`
+- If it's broken or incomplete → keep `"passes": false`
+- Do NOT remove or rename any features — only update the `passes` field
+
+This file is the ground truth. The improve phase will read it to know exactly what needs fixing.
+
+### Step 9: Update Progress
+
+Append to `.builder/progress.md`:
+
+```markdown
+## Test Phase (Round {round_number})
+- Features passing: X / Y total
+- Issues found: Z (X fixed during testing)
+- E2E tests: X written, Y passing
+- Unit tests: X written, Y passing
+- Status: COMPLETE
 ```

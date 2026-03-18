@@ -21,6 +21,13 @@ The setup phase has ALREADY:
 
 ## Your Task
 
+### 0. Startup Sequence (ALWAYS DO THIS FIRST)
+
+1. Read `.builder/progress.md` to see what setup has done
+2. Read `feature_checklist.json` — this is your target. Implement every feature listed.
+3. Run `.builder/init.sh` to verify the dev environment starts
+4. If init.sh fails, fix the issue before writing any code
+
 ### 1. Follow the Design System
 
 The design phase created a design system. You MUST:
@@ -134,3 +141,15 @@ The README must have **exact, copy-paste-ready commands**.
 
 Write ALL code files. Do not leave placeholders — implement everything fully.
 If this is round 2+, review the improvement suggestions and apply them to the existing codebase.
+
+### Update Progress
+
+After finishing, append to `.builder/progress.md`:
+
+```markdown
+## Build Phase (Round {round_number})
+- Features implemented: [list key features]
+- Build-test loop: [how many iterations to get it compiling/starting]
+- README: created/updated
+- Status: COMPLETE
+```
