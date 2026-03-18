@@ -156,6 +156,8 @@ async def run_with_dashboard(orchestrator: Orchestrator, config: BuilderConfig, 
         event_queue=event_queue,
         project_name=config.prompt[:50],
         total_rounds=config.rounds,
+        existing_project=config.existing_project,
+        orchestrator=orchestrator,
     )
 
     original_exit = dashboard.exit
