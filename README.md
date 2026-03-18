@@ -109,6 +109,7 @@ Stacks are opinionated for **speed and quality**. Every project uses pnpm, Supab
 
 | Requirement | Why | Install |
 |-------------|-----|---------|
+| **RTK** | Token-optimized CLI proxy — saves 60-90% tokens on dev operations. Subagents inherit RTK hooks automatically. | [github.com/anthropics/rtk](https://github.com/anthropics/rtk) |
 | **Supabase MCP** | Lets agents create tables, apply migrations, and test against your real Supabase project | [supabase-community/supabase-mcp](https://github.com/supabase-community/supabase-mcp) |
 | **PHP 8.2+ & Composer** | Only if building Laravel backend projects | [php.net](https://php.net), [getcomposer.org](https://getcomposer.org) |
 
