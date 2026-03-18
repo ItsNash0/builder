@@ -54,6 +54,25 @@ Actually run the project and USE IT like a real person would:
 5. **If it fails to start or crashes, fix the code directly.** Don't just document the problem.
 6. Stop any running servers when done.
 
+#### Supabase / Online Features Verification
+
+If this project uses Supabase, verify the online features actually work end-to-end:
+
+**You may have access to Supabase MCP tools.** If available, use them to verify the backend is correctly set up:
+- `list_tables` — verify all expected tables exist with correct columns
+- `execute_sql` — verify RLS policies are in place and working (query as anon vs authenticated)
+- `get_logs` — check for any auth or database errors
+- `get_project_url` / `get_publishable_keys` — verify `.env.local` has the real credentials
+
+**Verify these flows work end-to-end (not just UI, but data actually persists):**
+1. **Auth**: Sign up → verify user appears in `auth.users` → log out → log back in → session persists
+2. **CRUD**: Create item via UI → verify row exists in database → edit → verify update → delete → verify gone
+3. **Real-time**: If implemented, verify subscriptions deliver updates without page refresh
+4. **RLS**: Verify users can only access their own data (try querying another user's rows)
+5. **Storage**: If file uploads exist, verify files land in the correct Supabase bucket
+
+If Supabase MCP is NOT available, test through the UI only and document any flows that couldn't be fully verified.
+
 ### Step 2: Code Review
 
 Review every file for issues:

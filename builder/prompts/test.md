@@ -91,6 +91,11 @@ await browser.close();
 
 If the app uses Supabase or any online features, test them FOR REAL:
 
+**You may have access to Supabase MCP tools.** If available, use them to verify data actually reaches the database:
+- `execute_sql` — run SELECT queries to verify rows were created/updated/deleted
+- `list_tables` — confirm the schema matches what the app expects
+- `get_logs` — check for auth or database errors in Supabase logs
+
 **Auth Flow:**
 ```javascript
 // Test the complete auth flow in the browser
@@ -102,6 +107,9 @@ If the app uses Supabase or any online features, test them FOR REAL:
 // 6. Test logout
 // 7. Verify protected routes redirect to login when not authenticated
 ```
+After auth tests, if Supabase MCP is available:
+- Use `execute_sql` to verify the user was created in `auth.users`
+- Verify RLS policies work: query as the user vs. as anon
 
 **Database CRUD:**
 ```javascript
@@ -113,6 +121,9 @@ If the app uses Supabase or any online features, test them FOR REAL:
 // 5. Delete the item
 // 6. Verify it's gone
 ```
+After CRUD tests, if Supabase MCP is available:
+- Use `execute_sql` to verify the row exists in the actual table
+- After delete, verify the row is gone from the database too
 
 **Real-time Features:**
 ```javascript
